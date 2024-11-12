@@ -111,9 +111,12 @@ int main(int argc, char **argv){
         if(*input) add_history(input);
         
         char **command = split_command(input);
+
+        //TODO : Gérer ici le cas des commandes internes
+
+        //Lorsqu'aucune commande interne n'a été exécuté, essayer les commandes externes qui est fait avec le code suivant :
         int val = commande_externe(command);
         if(val == 1) errorCount++;
-        if(val == 0){}
         if(val == -1) {
             perror("Erreur lors du recouvrement");
             exit(1);
