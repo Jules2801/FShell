@@ -1,0 +1,45 @@
+# Fichiers générés par les systèmes de build
+build/
+*.o
+*.out
+*.a
+*.so
+*.exe
+*.dll
+*.dylib
+
+# Fichiers d'éditeurs et IDE
+## CLion
+.idea/
+cmake-build-*/
+
+## VSCode
+.vscode/
+*.code-workspace
+
+## Vim
+*.swp
+*.swo
+*.sw?
+*~
+
+# Fichiers générés par CMake
+CMakeFiles/
+CMakeCache.txt
+Makefile
+cmake_install.cmake
+compile_commands.json
+
+# Logs et fichiers temporaires
+*.log
+*.tmp
+*.temp
+
+# Fichiers de sauvegarde
+*.bak
+*.old
+
+# Binaires et fichiers d'exécution
+bin/
+obj/
+dist/
