@@ -1,0 +1,15 @@
+# Commande de compilation par défaut
+CC := gcc
+CFLAGS := -o fsh
+SRC := fsh.c utils.c command.c
+LDFLAGS := -lreadline
+
+# Cible principale
+all: fsh
+
+fsh:
+	$(CC) $(CFLAGS) $(SRC) $(LDFLAGS)
+
+# Nettoyage
+clean:
+	rm -f fsh
