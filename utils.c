@@ -5,6 +5,9 @@
 #include <unistd.h>
 #include <stdbool.h>
 #include <ctype.h>
+#include <dirent.h>
+
+int intern_for(int argc, char **argv);
 
 /**
  * Fonction permettant de compter le nombre de mots dans une chaîne de caractère.
@@ -33,7 +36,7 @@ int count_words(char *command){
  * @param command Une chaîne de caractère.
  * @return Le tableau de chaîne de caractère.
  */
-char **split_command(char *command){
+char **split_command(char *command, int *size){
     char **buffer;
     int length = (count_words(command)+1)*sizeof(char *);
 
@@ -69,7 +72,7 @@ char **split_command(char *command){
         }
     }
     
-    *(buffer+length-1) = NULL;
+    *(buffer+length-1) = (char *) NULL;
     return buffer;
 }
 
@@ -103,12 +106,10 @@ int commande_externe(char **command){
  * @param command Tout ce qui sera utiles pour appliquer la commande externe, telle que son nom et ses options.
  * @return Un entier supérieure à 1 si une erreur s'est produite pendant le recouvrement et 0 si tout s'est bien passé.
  */
-int forCommand(char **command){
+int forCommand(char **command, int size){
     pid_t pid = 0;
     if((pid = fork()) == 0){
-        execv("./for", command);
-        perror("Erreur lors du recouvrement");
-        exit(1);
+        exit(intern_for(size, command));
     }
     else{
         int status;
@@ -119,12 +120,25 @@ int forCommand(char **command){
 }
 
 /**
+ * Fonction permettant de compter le nombre d'élément d'une partition de chaîne de caractère.
+ * @param argv Partition de chaine de caractère
+ * @return Taille de la partition.
+ */
+int partSize(char **argv){
+    int i = 0;
+    while(*(argv+i) != (char *) NULL) i++;
+    return i;
+}
+
+/**
  * Fonction permettant d'appliquer toutes les fonctions internes/externes.
  * @param command Tout ce qui sera utiles pour appliquer la commande externe, telle que son nom et ses options.
  * @return Un entier supérieure à 1 si une erreur s'est produite pendant le recouvrement et 0 si tout s'est bien passé.
  */
 int applyCommand(char **command){
-    if(strcmp(command[0], "for") == 0) return forCommand(command);
+    if(strcmp(command[0], "for") == 0){
+        return forCommand(command, partSize(command));
+    }
     else return commande_externe(command);
 }
 
@@ -195,4 +209,125 @@ char ** split_argv_for(int bufSize, char **argv, int argvsize, char *dirname, ch
         perror("Erreur lors de la copie d'une chaine de caractère");
         if(res != NULL) free_double_buffer(res, bufSize+1);
         exit(1);
+}
+
+int intern_for(int argc, char **argv){
+    int result = 0;
+    char *errorMessage = "usage: for [variable-name] in REP [-A] [-r] [-e EXT] [-t TYPE] [-p MAX] { CMD }\n";
+
+    DIR *dir = NULL;
+    char *varname = NULL;
+
+    int a_option = 0;
+    int r_option = 0;
+    char *extension = NULL;
+    char type;
+    int max_parralel = -1;
+
+    char *s = "Erreur : option inconnue ou argument manquant\n";
+
+    struct dirent *entry = NULL;
+
+    if(argc < 7 || strcmp("in", argv[2])){
+        write(2, errorMessage, strlen(errorMessage));
+        return 1;
+    }
+
+    if((dir = opendir(argv[3])) == NULL){
+        perror("Erreur lors de l'ouverture du fichier");
+        result = 1;
+        goto cleanup_return;
+    }
+
+    if((varname = malloc((strlen(argv[1]) + 2) * sizeof(char))) == NULL){
+        perror("Erreur lors de l'allocation mémoire");
+        result = 1;
+        goto cleanup_return;
+    }
+    if(strcat(varname, "$") == NULL){
+        perror("Erreur lors de la concaténation d'une chaîne de caractère");
+        result = 1;
+        goto cleanup_return;
+    }
+    if(strcat(varname, argv[1]) == NULL){
+        perror("Erreur lors de la concaténation d'une chaîne de caractère");
+        result = 1;
+        goto cleanup_return;
+    }
+
+    int opt;
+    while((opt = getopt(argc, argv+3, ":Are:t:p:")) != -1){
+        switch(opt){
+            case 'A':
+                a_option = 1;
+                fflush(stdout);
+                break;
+
+            case 'r':
+                r_option = 1;
+                break;
+
+            case 'e' :
+                if((extension = malloc(strlen(optarg) * sizeof(char) + 1)) == NULL){
+                    char *s = "Erreur lors de l'allocation mémoire\n";
+                    write(STDERR_FILENO, s, strlen(s));
+                    result = 1;
+                    goto cleanup_return;
+                }
+
+                strcpy(extension, optarg);
+                *(extension + strlen(optarg)) = '\0';
+
+                break;
+
+            case 't' :
+                if(strlen(optarg) != 1){
+                    char *s = "Vous devez fournir un caractère\n";
+                    write(STDERR_FILENO, s, strlen(s));
+                    result = 1;
+                    goto cleanup_return;
+                }
+
+                type = *(optarg);
+
+                break;
+            
+            case 'p' :
+                // TODO : Créer une fonction permettant de vérifier qu'on entre bien un entier
+                max_parralel = atoi(optarg);
+
+                break;
+
+            case '?' :
+                write(2, s, strlen(s));
+                result = 1;
+                goto cleanup_return;
+        }   
+    }
+    int firstind = optind + 3;
+    if(strcmp("{", argv[firstind]) != 0 || strcmp("}", argv[argc-1]) != 0){
+        write(2, errorMessage, strlen(errorMessage));
+        result = 1;
+        goto cleanup_return;
+    }
+
+    while((entry = readdir(dir)) != NULL){
+        if(strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0 || (a_option == 0 && entry->d_name[0] == '.')) continue;
+        else{
+            int bufsize = argc - (firstind) - 2;
+            char **command = split_argv_for(argc - firstind - 2, argv + firstind + 1, argc - firstind, argv[3], entry->d_name, varname);
+            int retValue = applyCommand(command);
+            if(retValue > result) result = retValue;
+        }
+    }
+
+    goto cleanup_return;
+
+    cleanup_return :
+        if(dir != NULL) closedir(dir);
+        if(varname != NULL) free(varname);
+        if(extension != NULL) free(extension);
+        if(entry != NULL) free(entry);
+
+    return result;
 }
