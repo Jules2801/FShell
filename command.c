@@ -156,7 +156,11 @@ int intern_for(int argc, char **argv){
             
             case 'p' :
                 // TODO : Créer une fonction permettant de vérifier qu'on entre bien un entier
-                max_parralel = atoi(optarg);
+                if((max_parralel = stringToPositiveInteger(optarg)) == -1){
+                    write(2, errorMessage, strlen(errorMessage));
+                    result = 1;
+                    goto cleanup_return;
+                };
 
                 break;
 
@@ -174,7 +178,7 @@ int intern_for(int argc, char **argv){
     }
 
     while((entry = readdir(dir)) != NULL){
-        if(strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0 || (a_option == 0 && entry->d_name[0] == '.')) continue;
+        if(strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0 || (a_option == 0 && entry->d_name[0] == '.') || (extension != NULL && strcmp(extension, extract_extension(entry->d_name)))) continue;
         else{
             int bufsize = argc - (firstind) - 2;
             char **command = split_argv_for(argc - firstind - 2, argv + firstind + 1, argc - firstind, argv[3], entry->d_name, varname);
