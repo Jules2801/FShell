@@ -124,6 +124,87 @@ void free_double_buffer(char **buffer, int bufsize){
 }
 
 /**
+ * Fonction permettant de vérifier qu'une chaîne de caractère est égale à une autre sur les n premier octets.
+ * @param buf1 Chaîne de caractère pouvant être plus grand que buf2.
+ * @param buf2 Chaîne de caractère qui sera comparé avec buf1.
+ * @return 1 si buf2 est bien égale au début de buf1 et 0 sinon.
+ */
+int isEqualFirst(char *buf1, char *buf2){
+    if(strlen(buf2) > strlen(buf1)) return 0;
+    for(int i = 0 ; i < strlen(buf2); i++){
+        if(buf1[i] != buf2 [i]) return 0;
+    }
+    return 1;
+}
+
+/**
+ * Fonction permettant de remplacer le nom d'une variable par un nom donné dans une chaîne de caractère.
+ * @param arg Chaîne de caractère.
+ * @param var La variable dans la chaîne de caractère.
+ * @param name Le nom par lequel la variable sera remplacé.
+ * @return La chaîne de caractère identique si aucune variable remplaçable est présente et sinon la nouvelle chaîne de caractère avec la variable remplacé.
+ */
+char *replace_var(char *arg, char *var, char *name){
+    char *buf;
+    int bufsize = 0;
+    int i = 0;
+    while(i < strlen(arg)){
+        if(arg[i] == '$'){
+            if(i + strlen(var) >= strlen(arg)) break;
+            else if(isEqualFirst(arg+i, var)){
+                bufsize += strlen(name);
+                i += strlen(var);
+            }
+            else{
+                bufsize++;
+                i++;
+            }
+        }
+        else{
+            bufsize++;
+            i++;
+        }
+    }
+
+    if((buf = malloc(((bufsize) + 1) * sizeof(char))) == NULL){
+        perror("Erreur lors de l'allocation mémoire");
+        exit(1);
+    }
+
+    i = 0;
+    int j = 0;
+    while(j < bufsize){
+        if(arg[i] == '$'){
+            if(i + strlen(var) >= strlen(arg)){
+                buf[j] = arg[i];
+                i++;
+                j++;
+            }
+            else if (isEqualFirst(arg+i, var)){
+                for(int k = 0; k < strlen(name); k++){
+                    buf[j] = name[k];
+                    j++;
+                }
+                i += strlen(var);
+            }
+            else{
+                buf[j] = arg[i];
+                i++;
+                j++;
+            }
+        }
+        else{
+            buf[j] = arg[i];
+            i++;
+            j++;
+        }
+    }
+
+    buf[bufsize] = '\0';
+    return buf;
+}
+
+/**
  * Fonction permettant d'avoir une nouvelle partition de chaîne de caractère en prennant en compte le fait de remplacer $F par le nom d'une entrée donné
  * @param bufSize Taille du tableau de la chaîne de caractère.
  * @param argv Tableau de chaîne de caractère initiale.
@@ -142,7 +223,7 @@ char ** split_argv_for(int bufSize, char **argv, int argvsize, char *dirname, ch
         
         else{
             if((res[i] = malloc(strlen(argv[i] + 1))) == NULL) goto error;
-            if(strcpy(res[i], argv[i]) == NULL) goto error;
+            else if(strcpy(res[i], replace_var(argv[i], varname, getRelativeReference(dirname, filename))) == NULL) goto error;
         };
     }
     res[bufSize] = (char *) NULL;
