@@ -7,31 +7,87 @@
 #include <ctype.h>
 #include <dirent.h>
 #include "utils.h"
+#include <sys/stat.h>
 
 int commande_externe(char **command);
 
-int forCommand(char **command, int size);
-int intern_for(int argc, char **argv);
+int forCommand(char **command);
+int cmd_for(int argc, char **argv);
+
+int exitCommand(char **command, int *error);
+int cmd_exit(char **command, int *error);
+
+
+int ftypeCommand(char **command);
+int cmd_ftype(char **command);
+
+int pwdCommand(char **command);
+int cmd_pwd(char **command);
 
 /**
  * Fonction permettant d'appliquer toutes les fonctions internes/externes.
  * @param command Tout ce qui sera utiles pour appliquer la commande externe, telle que son nom et ses options.
- * @return Un entier supérieure à 1 si une erreur s'est produite pendant le recouvrement et 0 si tout s'est bien passé.
  */
-int applyCommand(char **command){
-    if(strcmp(command[0], "for") == 0) return forCommand(command, partSize(command));
-    else return commande_externe(command);
+void applyCommand(char **command, int *error){
+    if(strcmp(command[0], "pwd") == 0) *error = pwdCommand(command);
+    else if(strcmp(command[0], "exit") == 0) *error = exitCommand(command, error);
+    else if(strcmp(command[0], "ftype") == 0) *error = ftypeCommand(command);
+    else if(strcmp(command[0], "for") == 0) *error =  forCommand(command);
+    else *error = commande_externe(command);
 }
 
 /**
  * Fonction permettant d'appliquer la commande for.
  * @param command Tout ce qui sera utiles pour appliquer la commande externe, telle que son nom et ses options.
- * @return Un entier supérieure à 1 si une erreur s'est produite pendant le recouvrement et 0 si tout s'est bien passé.
+ * @param size Taille de la partition de chaîne de caractère.
+ * @return Un entier supérieure à 1 si une erreur s'est produite pendant le processus et 0 si tout s'est bien passé.
  */
-int forCommand(char **command, int size){
+int forCommand(char **command){
     pid_t pid = 0;
     if((pid = fork()) == 0){
-        exit(intern_for(size, command));
+        exit(cmd_for(partSize(command), command));
+    }
+    else{
+        int status;
+        waitpid(pid, &status, 0);
+        if(WIFEXITED(status)) return WEXITSTATUS(status);
+        return 1;
+    }
+}
+
+/**
+ * Fonction permettant d'appliquer la commande pwd.
+ * @return Un entier supérieure à 1 si une erreur s'est produite pendant le processus et 0 si tout s'est bien passé.
+ */
+int pwdCommand(char **command){
+    pid_t pid = 0;
+    if((pid = fork()) == 0){
+        exit(cmd_pwd(command));
+    }
+    else{
+        int status;
+        waitpid(pid, &status, 0);
+        if(WIFEXITED(status)) return WEXITSTATUS(status);
+        return 1;
+    }
+}
+
+/**
+ * Fonction permettant d'appliquer la commande exit.
+ * @return Un entier supérieure à 1 si une erreur s'est produite pendant le processus et 0 si tout s'est bien passé.
+ */
+int exitCommand(char **command, int *error){
+    return cmd_exit(command, error);
+}
+
+/**
+ * Fonction permettant d'appliquer la commande exit.
+ * @return Un entier supérieure à 1 si une erreur s'est produite pendant le processus et 0 si tout s'est bien passé.
+ */
+int ftypeCommand(char **command){
+    pid_t pid = 0;
+    if((pid = fork()) == 0){
+        exit(cmd_ftype(command));
     }
     else{
         int status;
@@ -67,13 +123,76 @@ int commande_externe(char **command){
 }
 
 
+int cmd_exit(char  **command, int *error) {
+    char *errorMessage = "usage: exit [VAL]\n";
+    int size = partSize(command);
 
+    if(size == 0){
+        write(2, errorMessage, strlen(errorMessage));
+        return 1;
+    }
+    else if(size == 1) exit(*error);
+    else{
+        int err = stringToPositiveInteger(command[1]);
+        if(err == -1){
+            write(2, errorMessage, strlen(errorMessage));
+            return 1;
+        }
+        else exit(err);
+    }
+}
 
+int cmd_ftype(char **command) {
+    char *errorMessage = "usage: ftype REF\n";
+    int size = partSize(command);
 
+    if(size != 2){
+        write(2, errorMessage, strlen(errorMessage));
+        return 1;
+    }
 
+    struct stat statbuf;
 
+    if (stat(command[1], &statbuf) == -1) {
+        perror("stat");
+        return 1;
+    }
+    char *s;
+    if (S_ISDIR(statbuf.st_mode)) {
+        s = "directory\n";
+    } else if (S_ISREG(statbuf.st_mode)) {
+        s = "regular file\n";
+    } else if (S_ISLNK(statbuf.st_mode)) {
+        s = "symbolic link\n";
+    } else if (S_ISFIFO(statbuf.st_mode)) {
+        s = "named pipe\n";
+    } else {
+        s = "other\n";
+    }
+    write(1, s, strlen(s));
+    return 0;
+}
 
-int intern_for(int argc, char **argv){
+int cmd_pwd(char **command) {
+    char *errorMessage = "pwd: Too many argument!\n";
+    int size = partSize(command);
+
+    if(size != 1){
+        write(2, errorMessage, strlen(errorMessage));
+        return 1;
+    }
+    char cwd[1024];
+    
+    if (getcwd(cwd, sizeof(cwd)) != NULL) {
+        write(1, cwd, strlen(cwd));
+        return 0;
+    } else {
+        perror("getcwd");
+        return 1;
+    }
+}
+
+int cmd_for(int argc, char **argv){
     int result = 0;
     char *errorMessage = "usage: for [variable-name] in REP [-A] [-r] [-e EXT] [-t TYPE] [-p MAX] { CMD }\n";
 
@@ -182,8 +301,7 @@ int intern_for(int argc, char **argv){
         else{
             int bufsize = argc - (firstind) - 2;
             char **command = split_argv_for(argc - firstind - 2, argv + firstind + 1, argc - firstind, argv[3], entry->d_name, varname);
-            int retValue = applyCommand(command);
-            if(retValue > result) result = retValue;
+            applyCommand(command, &result);
         }
     }
 

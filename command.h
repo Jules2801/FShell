@@ -1,6 +1,6 @@
 #ifndef COMMAND_H
 #define COMMAND_H
 
-int applyCommand(char **command);
+void applyCommand(char **command, int *error);
 
 #endif
