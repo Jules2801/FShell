@@ -7,6 +7,7 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 #include "utils.h"
+#include "command.h"
 
 
 int main(int argc, char **argv){

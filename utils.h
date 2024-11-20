@@ -3,6 +3,5 @@
 
 char **split_command(char *command);
 char ** split_argv_for(int bufSize, char **argv, int argvsize, char *filename, char *dirname, char *varname);
-int applyCommand(char **command);
-
+int partSize(char **argv);
 #endif
