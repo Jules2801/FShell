@@ -10,17 +10,11 @@
 #include "utils.h"
 
 int main(int argc, char **argv){
-    char *errorMessage = "usage: for F in REP [-A] [-r] [-e EXT] [-t TYPE] [-p MAX] { CMD }\n";
-    if(argc < 7 || strcmp("F", argv[1]) != 0 || strcmp("in", argv[2])){
-        write(2, errorMessage, strlen(errorMessage));
-        exit(1);
-    }
+    int result = 0;
+    char *errorMessage = "usage: for [variable-name] in REP [-A] [-r] [-e EXT] [-t TYPE] [-p MAX] { CMD }\n";
 
-    DIR *dir;
-    if((dir = opendir(argv[3])) == NULL){
-        perror("Erreur lors de l'ouverture du fichier");
-        exit(1);
-    }
+    DIR *dir = NULL;
+    char *varname = NULL;
 
     int a_option = 0;
     int r_option = 0;
@@ -29,6 +23,35 @@ int main(int argc, char **argv){
     int max_parralel = -1;
 
     char *s = "Erreur : option inconnue ou argument manquant\n";
+
+    struct dirent *entry = NULL;
+
+    if(argc < 7 || strcmp("in", argv[2])){
+        write(2, errorMessage, strlen(errorMessage));
+        exit(1);
+    }
+
+    if((dir = opendir(argv[3])) == NULL){
+        perror("Erreur lors de l'ouverture du fichier");
+        result = 1;
+        goto cleanup_return;
+    }
+
+    if((varname = malloc((strlen(argv[1]) + 2) * sizeof(char))) == NULL){
+        perror("Erreur lors de l'allocation mémoire");
+        result = 1;
+        goto cleanup_return;
+    }
+    if(strcat(varname, "$") == NULL){
+        perror("Erreur lors de la concaténation d'une chaîne de caractère");
+        result = 1;
+        goto cleanup_return;
+    }
+    if(strcat(varname, argv[1]) == NULL){
+        perror("Erreur lors de la concaténation d'une chaîne de caractère");
+        result = 1;
+        goto cleanup_return;
+    }
 
     int opt;
     while((opt = getopt(argc, argv+3, ":Are:t:p:")) != -1){
@@ -46,7 +69,8 @@ int main(int argc, char **argv){
                 if((extension = malloc(strlen(optarg) * sizeof(char) + 1)) == NULL){
                     char *s = "Erreur lors de l'allocation mémoire\n";
                     write(STDERR_FILENO, s, strlen(s));
-                    exit(1);
+                    result = 1;
+                    goto cleanup_return;
                 }
 
                 strcpy(extension, optarg);
@@ -58,7 +82,8 @@ int main(int argc, char **argv){
                 if(strlen(optarg) != 1){
                     char *s = "Vous devez fournir un caractère\n";
                     write(STDERR_FILENO, s, strlen(s));
-                    exit(1);
+                    result = 1;
+                    goto cleanup_return;
                 }
 
                 type = *(optarg);
@@ -73,25 +98,34 @@ int main(int argc, char **argv){
 
             case '?' :
                 write(2, s, strlen(s));
-                exit(1);
+                result = 1;
+                goto cleanup_return;
         }   
     }
-
-    if(strcmp("{", argv[optind + 3]) != 0 || strcmp("}", argv[argc-1]) != 0){
-        closedir(dir);
+    int firstind = optind + 3;
+    if(strcmp("{", argv[firstind]) != 0 || strcmp("}", argv[argc-1]) != 0){
         write(2, errorMessage, strlen(errorMessage));
+        result = 1;
+        goto cleanup_return;
     }
 
-    struct dirent *entry;
-    int result = 0;
     while((entry = readdir(dir)) != NULL){
         if(strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0 || (a_option == 0 && entry->d_name[0] == '.')) continue;
         else{
-            char **command = split_argv_for(argc - (optind + 3) - 2, argv+optind+4, entry->d_name, argv[3]);
+            int bufsize = argc - (firstind) - 2;
+            char **command = split_argv_for(argc - firstind - 2, argv + firstind + 1, argc - firstind, argv[3], entry->d_name, varname);
             int retValue = applyCommand(command);
             if(retValue > result) result = retValue;
         }
     }
+
+    goto cleanup_return;
+
+    cleanup_return :
+        if(dir != NULL) closedir(dir);
+        if(varname != NULL) free(varname);
+        if(extension != NULL) free(extension);
+        if(entry != NULL) free(entry);
 
     exit(result);
 }

@@ -153,6 +153,20 @@ char * getRelativeReference(char *dirname, char *filename){
 }
 
 /**
+ * Fonction permettant de libérer un buffer représentant un tableau de chaîne de caractère.
+ * @param buffer Le tableau de chaine de caractère
+ * @param bufsize La taille du buffer
+ */
+void free_double_buffer(char **buffer, int bufsize){
+    puts("je suis ici");
+    for(int i = 0; i < bufsize; i++){
+        puts("c'est a cause de ça");
+        if(*(buffer) + i != NULL) free(*(buffer)+ i);
+    }
+    free(buffer);
+}
+
+/**
  * Fonction permettant d'avoir une nouvelle partition de chaîne de caractère en prennant en compte le fait de remplacer $F par le nom d'une entrée donné
  * @param bufSize Taille du tableau de la chaîne de caractère.
  * @param argv Tableau de chaîne de caractère initiale.
@@ -160,25 +174,25 @@ char * getRelativeReference(char *dirname, char *filename){
  * @param dirname Reférence du répertoire courant.
  * @return Nouvelle partition de chaîne de caractère avec $F remplacé par la référence de l'entrée.
  */
-char ** split_argv_for(int bufSize, char **argv, char *filename, char *dirname){
-    int i = 0;
+char ** split_argv_for(int bufSize, char **argv, int argvsize, char *dirname, char *filename, char *varname){
     char **res = NULL;
+    int i;
     if((res = malloc((bufSize + 1) * sizeof(char *))) == NULL) goto error;
-
-    while(strcmp("}", argv[i]) != 0){
-        if(strcmp("$F", argv[i]) == 0){
+    for(i = 0; i < argvsize-1; i++){
+        if(strcmp(varname, argv[i]) == 0){
             res[i] = getRelativeReference(dirname, filename);
         }
+        
         else{
             if((res[i] = malloc(strlen(argv[i] + 1))) == NULL) goto error;
             if(strcpy(res[i], argv[i]) == NULL) goto error;
         };
-        i++;
     }
-    res[i] = (char *) NULL;
+    res[bufSize] = (char *) NULL;
     return res;
 
     error:
         perror("Erreur lors de la copie d'une chaine de caractère");
+        if(res != NULL) free_double_buffer(res, bufSize+1);
         exit(1);
 }
