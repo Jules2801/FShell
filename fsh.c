@@ -11,7 +11,7 @@
 
 
 int main(int argc, char **argv){
-    int errorCount = 0;
+    int error = 0;
     char *input;
 
 
@@ -24,6 +24,6 @@ int main(int argc, char **argv){
         
         char **command = split_command(input);
 
-        if((applyCommand(command)) >= 1) errorCount++;
+        applyCommand(command, &error);
     }
 }
