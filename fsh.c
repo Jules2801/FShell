@@ -19,6 +19,7 @@ int main(int argc, char **argv){
         input = readline("./fsh : ");
 
         if(input == NULL) break;
+        if(strlen(input) == 0) continue;
         if(*input) add_history(input);
         
         char **command = split_command(input);
