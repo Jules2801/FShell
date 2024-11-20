@@ -153,3 +153,62 @@ char ** split_argv_for(int bufSize, char **argv, int argvsize, char *dirname, ch
         if(res != NULL) free_double_buffer(res, bufSize+1);
         exit(1);
 }
+
+/**
+ * Fonction permettant de vérifier qu'une chaîne de caractère représente bien un entier positif.
+ * @param arg La chaîne de caractère.
+ * @return 1 si cela représente bien un entier ou 0 sinon.
+ */
+int isPositiveInteger(char *arg){
+    for(int i = 0; i < strlen(arg); i++){
+        if(!(arg[i] >= '0' && arg[i] <= '9')) return 0;
+    }
+    return 1;
+}
+
+/**
+ * Fonction permettant de convertir une chaîne de caractère en entier positif.
+ * @param arg La chaîne de caractère.
+ * @return L'entier représenté par la chaîne de caractère et -1 sinon.
+ */
+int stringToPositiveInteger(char *arg){
+    if(!isPositiveInteger(arg) || arg == NULL) return -1;
+
+    int res = 0;
+    for(int i = 0; i < strlen(arg); i++){
+        res = res * 10 + (arg[i] - '0');
+    }
+
+    return res;
+}
+
+/**
+ * Fonction permettant d'extraite l'extension d'une référence donné.
+ * @param arg Référence contenant une extension ou non.
+ * @return L'extension si le fichier possède une extension et NULL sinon.
+ */
+char *extract_extension(char* arg){
+    if(strlen(arg) == 0 || arg[0] == '.' && strchr(arg + 1, '.') == NULL) return NULL;
+
+    int count = 0;
+    int found_dot = 0;
+    for(int i = strlen(arg)-1; i > 0; i--){
+        if(arg[i] == '.'){
+            found_dot = 1;
+            break;
+        }
+        count++;
+    }
+
+    if(!found_dot) return NULL;
+
+    char *res;
+    if((res = malloc((count + 1) * sizeof(char))) == NULL){
+        perror("Erreur lors de l'allocation mémoire");
+        exit(1);
+    }
+
+    strcpy(res, (arg+(strlen(arg)-count)));
+
+    return res;
+}
