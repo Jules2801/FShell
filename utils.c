@@ -293,3 +293,20 @@ char *extract_extension(char* arg){
 
     return res;
 }
+
+/**
+ * Fonction permettant de concaténer deux chaînes de caractères
+ */
+char *concat(char *arg1, char *arg2){
+    char *buffer;
+    if((buffer = malloc((strlen(arg1) + strlen(arg2) + 2))) == NULL){
+        perror("Erreur lors de l'allocation mémoire");
+        exit(1);
+    }
+
+    strcat(buffer, arg1);
+    strcat(buffer, arg2);
+    strcat(buffer, "\n");
+
+    return buffer;
+}
