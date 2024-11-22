@@ -223,7 +223,7 @@ int cmd_cd(char **command){
     if(partSize(command)==1){
         path = getenv("$HOME");
         if(path==NULL){
-            write(1,"$HOME not set\n",16);
+            write(1,"$HOME not set\n",15);
             return 1;
         }
     }
@@ -242,7 +242,7 @@ int cmd_cd(char **command){
         }
     }
     if(chdir(path)!=0){
-        write(1,"Le chemin n'est pas correcte\n",31);
+        write(1,"Le chemin n'est pas correcte\n",30);
         return 1;
     }else{
         update_directories(path);
