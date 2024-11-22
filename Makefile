@@ -1,7 +1,7 @@
 # Commande de compilation par défaut
 CC := gcc
 CFLAGS := -o fsh
-SRC := fsh.c utils.c command.c
+SRC := fsh.c utils.c command.c prompt.c
 LDFLAGS := -lreadline
 
 # Cible principale

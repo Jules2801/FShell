@@ -6,6 +6,7 @@
 #include <ctype.h>
 #include <readline/readline.h>
 #include <readline/history.h>
+#include "prompt.h"
 #include "utils.h"
 #include "command.h"
 
@@ -16,7 +17,8 @@ int main(int argc, char **argv){
 
 
     while(1) {
-        input = readline("./fsh : ");
+        rl_outstream = stderr;
+        input = readline(prompt(error));
 
         if(input == NULL) break;
         if(strlen(input) == 0) continue;
