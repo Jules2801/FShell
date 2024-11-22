@@ -180,12 +180,8 @@ int cmd_pwd(char **command) {
     char *errorMessage = "pwd: Too many argument!\n";
     int size = partSize(command);
 
-    if(size != 1){
-        write(2, errorMessage, strlen(errorMessage));
-        return 1;
-    }
     char cwd[1024];
-    
+       
     if (getcwd(cwd, sizeof(cwd)) != NULL) {
         write(1, cwd, strlen(cwd));
         return 0;

@@ -299,11 +299,15 @@ char *extract_extension(char* arg){
  */
 char *concat(char *arg1, char *arg2){
     char *buffer;
-    if((buffer = malloc((strlen(arg1) + strlen(arg2) + 2))) == NULL){
+    size_t size = strlen(arg1) + strlen(arg2) + 2;
+    if((buffer = malloc((size)*sizeof(char))) == NULL){
         perror("Erreur lors de l'allocation mémoire");
         exit(1);
     }
 
+    buffer[0] = '\0';
+
+    snprintf(buffer, size, "%s%s\n", arg1, arg2);
     strcat(buffer, arg1);
     strcat(buffer, arg2);
     strcat(buffer, "\n");
