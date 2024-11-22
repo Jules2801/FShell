@@ -308,9 +308,6 @@ char *concat(char *arg1, char *arg2){
     buffer[0] = '\0';
 
     snprintf(buffer, size, "%s%s\n", arg1, arg2);
-    strcat(buffer, arg1);
-    strcat(buffer, arg2);
-    strcat(buffer, "\n");
 
     return buffer;
 }
