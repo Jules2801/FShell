@@ -181,8 +181,9 @@ int cmd_pwd(char **command) {
     int size = partSize(command);
 
     char cwd[1024];
-       
+
     if (getcwd(cwd, sizeof(cwd)) != NULL) {
+        strcat(cwd, "\n");
         write(1, cwd, strlen(cwd));
         return 0;
     } else {
