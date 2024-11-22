@@ -2,12 +2,14 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/_types/_null.h>
 #include <unistd.h>
 #include <stdbool.h>
 #include <ctype.h>
 #include <dirent.h>
 #include "utils.h"
 #include <sys/stat.h>
+#include "global.h"
 
 int commande_externe(char **command);
 
@@ -24,6 +26,22 @@ int cmd_ftype(char **command);
 int pwdCommand(char **command);
 int cmd_pwd(char **command);
 
+int cdCommand(char **command);
+int cmd_cd(char **command);
+
+
+/**
+ * Fonction permettant de mettre a jour le repertoire courant et l'ancien
+ * @param new_directory le chemin du nouveau repertoire courant
+ */
+void update_directories(const char *new_directory) {
+    if (previous_directory != NULL) {
+        free(previous_directory);
+    }
+    previous_directory = current_directory;
+    current_directory = strdup(new_directory);
+}
+
 /**
  * Fonction permettant d'appliquer toutes les fonctions internes/externes.
  * @param command Tout ce qui sera utiles pour appliquer la commande externe, telle que son nom et ses options.
@@ -33,6 +51,7 @@ void applyCommand(char **command, int *error){
     else if(strcmp(command[0], "exit") == 0) *error = exitCommand(command, error);
     else if(strcmp(command[0], "ftype") == 0) *error = ftypeCommand(command);
     else if(strcmp(command[0], "for") == 0) *error =  forCommand(command);
+    else if(strcmp(command[0], "cd") == 0) *error =  cdCommand(command);
     else *error = commande_externe(command);
 }
 
@@ -95,6 +114,14 @@ int ftypeCommand(char **command){
         if(WIFEXITED(status)) return WEXITSTATUS(status);
         return 1;
     }
+}
+
+/**
+ * Fonction permettant d'appliquer la commande cd.
+ * @return Un entier supérieure à 1 si une erreur s'est produite pendant le processus et 0 si tout s'est bien passé.
+ */
+int cdCommand(char **command){
+    return cmd_cd(command);   
 }
 
 /**
@@ -189,6 +216,39 @@ int cmd_pwd(char **command) {
     } else {
         perror("getcwd");
         return 1;
+    }
+}
+
+int cmd_cd(char **command){
+    printf("test");
+    char *path;
+    if(partSize(command)==1){
+        path = getenv("$HOME");
+        if(path==NULL){
+            write(1,"$HOME not set\n",15);
+            return 1;
+        }
+    }
+    else{
+        if(strcmp(command[1],"-")==0){
+            if(previous_directory==NULL){
+                write(1,"Il n'y a pas de repertoire de travail précédent\n",50);
+                return 1;
+            }
+            else{
+                path = previous_directory;
+                
+            }
+        }else{
+            path = command[1];
+        }
+    }
+    if(chdir(path)!=0){
+        write(1,"Le chemin n'est pas correcte\n",30);
+        return 1;
+    }else{
+        update_directories(path);
+        return 0;
     }
 }
 
