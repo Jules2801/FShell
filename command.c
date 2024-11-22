@@ -221,7 +221,7 @@ int cmd_pwd(char **command) {
 int cmd_cd(char **command){
     char *path;
     if(partSize(command)==1){
-        path = "$HOME";
+        path = getenv("HOME");
         if(path==NULL){
             write(1,"$HOME not set\n",15);
             return 1;
