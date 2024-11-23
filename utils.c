@@ -34,7 +34,7 @@ int count_words(char *command){
  * @param command Une chaîne de caractère.
  * @return Le tableau de chaîne de caractère.
  */
-char **split_command(char *command, int *size){
+char **split_command(char *command){
     char **buffer;
     int length = (count_words(command)+1)*sizeof(char *);
 
@@ -70,7 +70,7 @@ char **split_command(char *command, int *size){
         }
     }
     
-    *(buffer+length-1) = (char *) NULL;
+    *(buffer+count) = (char *) NULL;
     return buffer;
 }
 

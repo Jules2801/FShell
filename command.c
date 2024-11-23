@@ -8,6 +8,8 @@
 #include <dirent.h>
 #include "utils.h"
 #include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 int commande_externe(char **command);
 
