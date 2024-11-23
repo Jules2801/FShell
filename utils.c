@@ -81,7 +81,9 @@ char **split_command(char *command){
  */
 int partSize(char **argv){
     int i = 0;
-    while(*(argv+i) != (char *) NULL) i++;
+    while(*(argv+i) != (char *) NULL){
+        i++;
+    }
     return i;
 }
 
@@ -269,7 +271,7 @@ int stringToPositiveInteger(char *arg){
  * @return L'extension si le fichier possède une extension et NULL sinon.
  */
 char *extract_extension(char* arg){
-    if(strlen(arg) == 0 || arg[0] == '.' && strchr(arg + 1, '.') == NULL) return NULL;
+    if(strlen(arg) == 0 || (arg[0] == '.' && strchr(arg + 1, '.') == NULL)) return NULL;
 
     int count = 0;
     int found_dot = 0;
@@ -296,6 +298,9 @@ char *extract_extension(char* arg){
 
 /**
  * Fonction permettant de concaténer deux chaînes de caractères
+ * @param arg1 Première chaîne de caractère.
+ * @param arg2 Seconde chaîne de caractère.
+ * @return Une chaîne de caractère représentant la concaténation de arg1 et arg2 aveec un ssaut à la ligne.
  */
 char *concat(char *arg1, char *arg2){
     char *buffer;
@@ -310,4 +315,122 @@ char *concat(char *arg1, char *arg2){
     snprintf(buffer, size, "%s%s\n", arg1, arg2);
 
     return buffer;
+}
+
+/**
+ * Fonction permettant de vérifier si une partition correspond à une commande structurée.
+ * @param partition La partition
+ * @return 1 si cela représente bien une partition et 0 si ce n'est pas une partition du tout et -1 si cela devait représenter une partition.
+ */
+int isStructuredCommand(char **partition){
+    char *s = "Usage: CMD_1 ; CMD_2 ; ... ; CMD_N\n";
+    int hasSemi = 0;
+    int hasBrace = 0;
+    int partsize = partSize(partition);
+
+    if(strcmp(";", partition[0]) == 0 || strcmp(";", partition[partsize-1]) == 0){
+        write(2, s, strlen(s));
+        return -1;
+    }
+
+    for(int i = 1; i < partsize-1; i++){
+        if(strcmp(partition[i], "{") == 0) hasBrace = 1;
+        else if(strcmp(partition[i], "}") == 0) hasBrace = 0;
+        else if (strcmp(partition[i], ";") == 0 && hasBrace == 0) return 1;
+    }
+
+    return 0;
+}
+
+/**
+ * Fonction permettant de savoir le nombre de commande dans une commande structurée.
+ * @param Partition représentant une commande structurée.
+ * @return Le nombre de commande dans une commande structurée.
+ */
+int nbCommand(char **partition){
+    int res = 0;
+    int hasBrace = 0;
+    int partsize = partSize(partition);
+
+    for(int i = 0; i < partsize; i++){
+        if(strcmp(partition[i], "{") == 0) hasBrace = 1;
+        else if(strcmp(partition[i], "}") == 0) hasBrace = 0;
+        else if(strcmp(partition[i], ";") == 0 && hasBrace == 0) res++;
+    }
+
+    if(res == 0) return res;
+    return res + 1;
+}
+
+/**
+ * Fonction permettant de créer une sous-partition d'une partition donné en fonction de la position du début et de la fin.
+ * @param partition La partition de base
+ * @param first Position du début de la sous-partition
+ * @param last Position de la fin de la sous-partition
+ * @return La nouvelle sous-partition voulue.
+ */
+char **makeSubPartition(char **partition, int first, int last){
+    char **sub;
+    int subsize = last-first+2;
+    if((sub = malloc((subsize) * sizeof(char *))) == NULL){
+        perror("Erreur lors de l'allocation mémoire");
+        exit(1);
+    }
+
+    int pos = 0;
+    for(int i = first; i <= last; i++){
+
+        int size = strlen(partition[i]) + 1;
+        if((sub[pos] = malloc(size + 1)) == NULL){
+            perror("Erreur lors de l'allocation mémoire");
+            exit(1);
+        }
+
+        strcpy(sub[pos], partition[i]);
+        pos++;
+    }
+
+    sub[subsize-1] = (char *) NULL;
+    return sub;
+}
+
+/**
+ * Fonction permettant de créer une liste de partition dans le cas d'une commande structurée :
+ * @param partition Partition représentant, normalement, une commande structurée.
+ * @param size Pointeur qui correspondra à la taille de la liste de partition
+ * @return La liste de partition de notre commande structurée.
+ */
+char ***makeStructuredCommand(char **partition, int *size){
+    char ***structuredCommand;
+    int scsize = nbCommand(partition);
+
+    int first = 0;
+    int last = 0;
+    int pos = 0;
+
+    int hasBrace = 0;
+
+    if((structuredCommand = malloc(scsize * sizeof(char **))) == NULL){
+        perror("Erreur lors de l'allocation mémoire");
+        exit(1);
+    }
+
+    for(int i = 0; i < partSize(partition); i++){
+        if(strcmp(partition[i], "{") == 0) hasBrace = 1;
+        else if(strcmp(partition[i], "}") == 0) hasBrace = 0;
+        else if(strcmp(partition[i], ";") == 0 && hasBrace == 0){
+            last = i-1;
+            structuredCommand[pos] = makeSubPartition(partition, first, last);
+            first = i+1;
+            pos++;
+        }
+    }
+
+    if(first < partSize(partition)) {
+        structuredCommand[pos] = makeSubPartition(partition, first, partSize(partition)-1);
+        pos++;
+    }
+    *size = pos;
+
+    return structuredCommand;
 }

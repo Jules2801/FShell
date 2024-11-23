@@ -48,12 +48,21 @@ void update_directories(const char *new_directory) {
  * @param command Tout ce qui sera utiles pour appliquer la commande externe, telle que son nom et ses options.
  */
 void applyCommand(char **command, int *error){
-    if(strcmp(command[0], "pwd") == 0) *error = pwdCommand(command);
-    else if(strcmp(command[0], "exit") == 0) *error = exitCommand(command, error);
-    else if(strcmp(command[0], "ftype") == 0) *error = ftypeCommand(command);
-    else if(strcmp(command[0], "for") == 0) *error =  forCommand(command);
-    else if(strcmp(command[0], "cd") == 0) *error =  cdCommand(command);
-    else *error = commande_externe(command);
+    if(isStructuredCommand(command)){
+        int size;
+        char ***commands = makeStructuredCommand(command, &size);
+        for(int i = 0; i < size; i++){
+            applyCommand(commands[i], error);
+        }
+    }
+    else{
+        if(strcmp(command[0], "pwd") == 0) *error = pwdCommand(command);
+        else if(strcmp(command[0], "exit") == 0) *error = exitCommand(command, error);
+        else if(strcmp(command[0], "ftype") == 0) *error = ftypeCommand(command);
+        else if(strcmp(command[0], "for") == 0) *error =  forCommand(command);
+        else if(strcmp(command[0], "cd") == 0) *error =  cdCommand(command);
+        else *error = commande_externe(command);
+    }
 }
 
 /**
@@ -205,8 +214,6 @@ int cmd_ftype(char **command) {
 }
 
 int cmd_pwd(char **command) {
-    char *errorMessage = "pwd: Too many argument!\n";
-    int size = partSize(command);
 
     char cwd[1024];
 
@@ -360,7 +367,7 @@ int cmd_for(int argc, char **argv){
         if(strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0 || (a_option == 0 && entry->d_name[0] == '.') || (extension != NULL && strcmp(extension, extract_extension(entry->d_name)))) continue;
         else{
             int bufsize = argc - (firstind) - 2;
-            char **command = split_argv_for(argc - firstind - 2, argv + firstind + 1, argc - firstind, argv[3], entry->d_name, varname);
+            char **command = split_argv_for(bufsize, argv + firstind + 1, argc - firstind, argv[3], entry->d_name, varname);
             applyCommand(command, &result);
         }
     }

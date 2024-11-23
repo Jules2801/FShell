@@ -7,5 +7,7 @@ int partSize(char **argv);
 int stringToPositiveInteger(char *arg);
 char *extract_extension(char* arg);
 char *concat(char *arg1, char *arg2);
+int isStructuredCommand(char **partition);
+char ***makeStructuredCommand(char **partition, int *size);
 
 #endif
