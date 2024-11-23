@@ -179,8 +179,6 @@ int cmd_ftype(char **command) {
 }
 
 int cmd_pwd(char **command) {
-    char *errorMessage = "pwd: Too many argument!\n";
-    int size = partSize(command);
 
     char cwd[1024];
 
@@ -302,7 +300,7 @@ int cmd_for(int argc, char **argv){
         if(strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0 || (a_option == 0 && entry->d_name[0] == '.') || (extension != NULL && strcmp(extension, extract_extension(entry->d_name)))) continue;
         else{
             int bufsize = argc - (firstind) - 2;
-            char **command = split_argv_for(argc - firstind - 2, argv + firstind + 1, argc - firstind, argv[3], entry->d_name, varname);
+            char **command = split_argv_for(bufsize, argv + firstind + 1, argc - firstind, argv[3], entry->d_name, varname);
             applyCommand(command, &result);
         }
     }

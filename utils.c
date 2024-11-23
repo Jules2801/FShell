@@ -269,7 +269,7 @@ int stringToPositiveInteger(char *arg){
  * @return L'extension si le fichier possède une extension et NULL sinon.
  */
 char *extract_extension(char* arg){
-    if(strlen(arg) == 0 || arg[0] == '.' && strchr(arg + 1, '.') == NULL) return NULL;
+    if(strlen(arg) == 0 || (arg[0] == '.' && strchr(arg + 1, '.') == NULL)) return NULL;
 
     int count = 0;
     int found_dot = 0;
