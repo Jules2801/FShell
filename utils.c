@@ -220,12 +220,12 @@ char ** split_argv_for(int bufSize, char **argv, int argvsize, char *dirname, ch
     if((res = malloc((bufSize + 1) * sizeof(char *))) == NULL) goto error;
     for(i = 0; i < argvsize-1; i++){
         if(strcmp(varname, argv[i]) == 0){
-            res[i] = getRelativeReference(dirname, filename);
+            res[i] = filename;
         }
         
         else{
             if((res[i] = malloc(strlen(argv[i] + 1))) == NULL) goto error;
-            else if(strcpy(res[i], replace_var(argv[i], varname, getRelativeReference(dirname, filename))) == NULL) goto error;
+            else if(strcpy(res[i], replace_var(argv[i], varname, filename)) == NULL) goto error;
         };
     }
     res[bufSize] = (char *) NULL;

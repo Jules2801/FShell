@@ -9,5 +9,5 @@ char *extract_extension(char* arg);
 char *concat(char *arg1, char *arg2);
 int isStructuredCommand(char **partition);
 char ***makeStructuredCommand(char **partition, int *size);
-
+char * getRelativeReference(char *dirname, char *filename);
 #endif
