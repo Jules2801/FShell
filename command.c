@@ -31,11 +31,20 @@ int cmd_pwd(char **command);
  * @param command Tout ce qui sera utiles pour appliquer la commande externe, telle que son nom et ses options.
  */
 void applyCommand(char **command, int *error){
-    if(strcmp(command[0], "pwd") == 0) *error = pwdCommand(command);
-    else if(strcmp(command[0], "exit") == 0) *error = exitCommand(command, error);
-    else if(strcmp(command[0], "ftype") == 0) *error = ftypeCommand(command);
-    else if(strcmp(command[0], "for") == 0) *error =  forCommand(command);
-    else *error = commande_externe(command);
+    if(isStructuredCommand(command)){
+        int size;
+        char ***commands = makeStructuredCommand(command, &size);
+        for(int i = 0; i < size; i++){
+            applyCommand(commands[i], error);
+        }
+    }
+    else{
+        if(strcmp(command[0], "pwd") == 0) *error = pwdCommand(command);
+        else if(strcmp(command[0], "exit") == 0) *error = exitCommand(command, error);
+        else if(strcmp(command[0], "ftype") == 0) *error = ftypeCommand(command);
+        else if(strcmp(command[0], "for") == 0) *error =  forCommand(command);
+        else *error = commande_externe(command);
+    }
 }
 
 /**
