@@ -150,7 +150,7 @@ int commande_externe(char **command){
     }
 
     if(pid == 0){
-        execv(command[0], command);
+        if(strlen(command[0]) > 2 && command[0][0] == '.' && command[0][1] == '/') execv(command[0], command);
         execvp(command[0], command);
         char *s = concat("fsh: command not found: ", command[0]);
         write(2, s, strlen(s));
