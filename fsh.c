@@ -32,6 +32,7 @@ int main(int argc, char **argv){
         if(*input) add_history(input);
         
         char **command = split_command(input);
+        free(input);
 
         applyCommand(command, &error);
 

@@ -9,6 +9,8 @@
 #include "utils.h"
 #include <sys/stat.h>
 #include "global.h"
+#include <sys/types.h>
+#include <sys/wait.h>
 
 int commande_externe(char **command);
 
