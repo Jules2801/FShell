@@ -37,4 +37,7 @@ int main(int argc, char **argv){
         applyCommand(command, &error);
 
     }
+
+    if(error < 0) exit(255);
+    exit(error);
 }
