@@ -182,7 +182,7 @@ int cmd_ftype(char **command) {
 
     struct stat statbuf;
 
-    if (stat(command[1], &statbuf) == -1) {
+    if (lstat(command[1], &statbuf) == -1) {
         perror("stat");
         return 1;
     }
