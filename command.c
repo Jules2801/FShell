@@ -80,6 +80,7 @@ int forCommand(char **command){
         int status;
         waitpid(pid, &status, 0);
         if(WIFEXITED(status)) return WEXITSTATUS(status);
+        if(WIFSIGNALED(status)) return -WTERMSIG(status);
         return 1;
     }
 }
@@ -97,6 +98,7 @@ int pwdCommand(char **command){
         int status;
         waitpid(pid, &status, 0);
         if(WIFEXITED(status)) return WEXITSTATUS(status);
+        if(WIFSIGNALED(status)) return -WTERMSIG(status);
         return 1;
     }
 }
@@ -122,6 +124,7 @@ int ftypeCommand(char **command){
         int status;
         waitpid(pid, &status, 0);
         if(WIFEXITED(status)) return WEXITSTATUS(status);
+        if(WIFSIGNALED(status)) return -WTERMSIG(status);
         return 1;
     }
 }
@@ -147,6 +150,7 @@ int commande_externe(char **command){
     }
 
     if(pid == 0){
+        execv(command[0], command);
         execvp(command[0], command);
         char *s = concat("fsh: command not found: ", command[0]);
         write(2, s, strlen(s));
@@ -158,6 +162,7 @@ int commande_externe(char **command){
         int status;
         waitpid(pid, &status, 0);
         if(WIFEXITED(status)) return WEXITSTATUS(status);
+        if(WIFSIGNALED(status)) return -WTERMSIG(status);
         return 1;
     }
 }
@@ -171,7 +176,10 @@ int cmd_exit(char  **command, int *error) {
         write(2, errorMessage, strlen(errorMessage));
         return 1;
     }
-    else if(size == 1) exit(*error);
+    else if(size == 1){
+        if(*error < 0) exit(255);
+        exit(*error);
+    }
     else{
         int err = stringToPositiveInteger(command[1]);
         if(err == -1){

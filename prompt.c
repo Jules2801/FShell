@@ -14,15 +14,16 @@ char *prompt(int value){ //TODO: vérifié si il est bien nécessaire de connait
 
     char *color;
     int prompt_status_len; //Représente la taille de [SIG] ou [(0 ou 1)] 5 pour le premier 3 pour le 2em
+    int numDigits = snprintf(NULL, 0, "%d", value);
     
 
-    if(value==255){ // On vérifie si un signal a interompue la commande précédente 
+    if(value < 0){ // On vérifie si un signal a interompue la commande précédente 
         color = "\033[36m"; // on change la couleur en conséquence 
         prompt_status_len = 5;
     }
     else{ //Sinon on vérifie si la commande précédente donnait une erreur ou non
-        prompt_status_len = 3;
-        if (value==1){
+        prompt_status_len = 2 + numDigits;
+        if (value > 0){
         color = "\033[91m";
         }
         else{
@@ -45,7 +46,7 @@ char *path = getcwd(NULL, 0); // Pour avoir le chemin total
         path[2] = '.';
         
     }
-    if(value==255) snprintf(fullPath, sizeof(fullPath),"%s[%s]%s$ \033[00m",color,"SIG",path);
+    if(value < 0) snprintf(fullPath, sizeof(fullPath),"%s[%s]%s$ \033[00m",color,"SIG",path);
     else snprintf(fullPath, sizeof(fullPath),"%s[%d]%s$ \033[00m",color,value,path);
 
     free(path);
