@@ -304,6 +304,7 @@ int cmd_for(int argc, char **argv){
         result = 1;
         goto cleanup_return;
     }
+    varname[0] = '\0';
     if(strcat(varname, "$") == NULL){
         perror("Erreur lors de la concaténation d'une chaîne de caractère");
         result = 1;
@@ -316,7 +317,7 @@ int cmd_for(int argc, char **argv){
     }
 
     int opt;
-    while((opt = getopt(argc, argv+3, ":Are:t:p:")) != -1){
+    while((opt = getopt(argc, argv+3, "+:Are:t:p:")) != -1){
         switch(opt){
             case 'A':
                 a_option = 1;
@@ -379,7 +380,7 @@ int cmd_for(int argc, char **argv){
         if(strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0 || (a_option == 0 && entry->d_name[0] == '.') || (extension != NULL && strcmp(extension, extract_extension(entry->d_name)))) continue;
         else{
             int bufsize = argc - (firstind) - 2;
-            char **command = split_argv_for(bufsize, argv + firstind + 1, argc - firstind, ref, entry->d_name, varname);
+            char **command = split_argv_for(bufsize, argv + firstind + 1, argc - firstind, entry->d_name, varname);
             applyCommand(command, &result);
         }
     }

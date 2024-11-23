@@ -2,7 +2,7 @@
 #define UTILS_H
 
 char **split_command(char *command);
-char ** split_argv_for(int bufSize, char **argv, int argvsize, char *filename, char *dirname, char *varname);
+char ** split_argv_for(int bufSize, char **argv, int argvsize, char *filename, char *varname);
 int partSize(char **argv);
 int stringToPositiveInteger(char *arg);
 char *extract_extension(char* arg);

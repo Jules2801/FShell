@@ -211,20 +211,20 @@ char *replace_var(char *arg, char *var, char *name){
  * @param bufSize Taille du tableau de la chaîne de caractère.
  * @param argv Tableau de chaîne de caractère initiale.
  * @param filename Nom de l'entrée.
- * @param dirname Reférence du répertoire courant.
  * @return Nouvelle partition de chaîne de caractère avec $F remplacé par la référence de l'entrée.
  */
-char ** split_argv_for(int bufSize, char **argv, int argvsize, char *dirname, char *filename, char *varname){
+char ** split_argv_for(int bufSize, char **argv, int argvsize, char *filename, char *varname){
     char **res = NULL;
     int i;
     if((res = malloc((bufSize + 1) * sizeof(char *))) == NULL) goto error;
     for(i = 0; i < argvsize-1; i++){
         if(strcmp(varname, argv[i]) == 0){
+            if((res[i] = malloc(strlen(filename) + 1)) == NULL) goto error;
             res[i] = filename;
         }
         
         else{
-            if((res[i] = malloc(strlen(argv[i] + 1))) == NULL) goto error;
+            if((res[i] = malloc(strlen(argv[i]) + 1)) == NULL) goto error;
             else if(strcpy(res[i], replace_var(argv[i], varname, filename)) == NULL) goto error;
         };
     }
