@@ -226,7 +226,9 @@ char ** split_argv_for(int bufSize, char **argv, int argvsize, char *dirname, ch
         
         else{
             if((res[i] = malloc(strlen(argv[i]) + 1)) == NULL) goto error;
-            strcpy(res[i], replace_var(argv[i], varname, filename));
+            char *newvar = replace_var(argv[i], varname, filename);
+            strcpy(res[i], newvar);
+            free(newvar);
         };
     }
     res[bufSize] = (char *) NULL;
