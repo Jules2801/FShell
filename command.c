@@ -53,7 +53,9 @@ void applyCommand(char **command, int *error){
         char ***commands = makeStructuredCommand(command, &size);
         for(int i = 0; i < size; i++){
             applyCommand(commands[i], error);
+            free_double_buffer(commands[i], partSize(commands[i]));
         }
+        free(commands);
     }
     else{
         if(strcmp(command[0], "pwd") == 0) *error = pwdCommand(command);
@@ -294,12 +296,13 @@ int cmd_for(int argc, char **argv){
         perror("Erreur lors de l'utilisation de getcwd");
         return 1;
     }
-
-    if((dir = opendir(getRelativeReference(".", argv[3]))) == NULL){
+    char *ref = getRelativeReference(".", argv[3]);
+    if((dir = opendir(ref)) == NULL){
         perror("Erreur lors de l'ouverture du fichier");
         result = 1;
         goto cleanup_return;
     }
+    free(ref);
 
     if((varname = malloc((strlen(argv[1]) + 2) * sizeof(char))) == NULL){
         perror("Erreur lors de l'allocation mémoire");

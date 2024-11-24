@@ -25,17 +25,20 @@ int main(int argc, char **argv){
 
     while(1) {
         rl_outstream = stderr;
-        input = readline(prompt(error));
+        char *prompt_string = prompt(error);
+        input = readline(prompt_string);
 
         if(input == NULL) break;
         if(strlen(input) == 0) continue;
         if(*input) add_history(input);
         
         char **command = split_command(input);
+
+        free(prompt_string);
         free(input);
 
         applyCommand(command, &error);
-
+        free_double_buffer(command, partSize(command));
     }
 
     if(error < 0) exit(255);

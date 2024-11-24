@@ -118,10 +118,8 @@ char * getRelativeReference(char *dirname, char *filename){
  * @param bufsize La taille du buffer
  */
 void free_double_buffer(char **buffer, int bufsize){
-    puts("je suis ici");
     for(int i = 0; i < bufsize; i++){
-        puts("c'est a cause de ça");
-        if(*(buffer) + i != NULL) free(*(buffer)+ i);
+        if(buffer[i] != NULL) free(buffer[i]);
     }
     free(buffer);
 }
@@ -223,6 +221,7 @@ char ** split_argv_for(int bufSize, char **argv, int argvsize, char *dirname, ch
             char *newref = getRelativeReference(dirname, filename);
             if((res[i] = malloc(strlen(newref) + 1)) == NULL) goto error;
             strcpy(res[i], newref);
+            free(newref);
         }
         
         else{
