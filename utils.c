@@ -213,7 +213,7 @@ char *replace_var(char *arg, char *var, char *name){
  * @param filename Nom de l'entrée.
  * @return Nouvelle partition de chaîne de caractère avec $F remplacé par la référence de l'entrée.
  */
-char ** split_argv_for(int bufSize, char **argv, int argvsize, char *filename, char *varname){
+char ** split_argv_for(int bufSize, char **argv, int argvsize, char *dirname, char *filename, char *varname){
     char **res = NULL;
     int i;
     if((res = malloc((bufSize + 1) * sizeof(char *))) == NULL) goto error;
@@ -222,10 +222,15 @@ char ** split_argv_for(int bufSize, char **argv, int argvsize, char *filename, c
             if((res[i] = malloc(strlen(filename) + 1)) == NULL) goto error;
             res[i] = filename;
         }
+        else if(strlen(argv[i]) > 2 && argv[i][0] == '.' && argv[i][1] == '/'){
+            char *newref = getRelativeReference(dirname, argv[i]);
+            if((res[i] = malloc(strlen(newref) + 1)) == NULL) goto error;
+            strcpy(res[i], newref);
+        }
         
         else{
             if((res[i] = malloc(strlen(argv[i]) + 1)) == NULL) goto error;
-            else if(strcpy(res[i], replace_var(argv[i], varname, filename)) == NULL) goto error;
+            strcpy(res[i], replace_var(argv[i], varname, filename));
         };
     }
     res[bufSize] = (char *) NULL;
