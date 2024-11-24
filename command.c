@@ -295,13 +295,7 @@ int cmd_for(int argc, char **argv){
         return 1;
     }
 
-    char *ref = getRelativeReference(buf, argv[3]);
-    if(chdir(ref) == -1){
-        perror("Erreur lors du changement de répertoire");
-        return 1;
-    }
-
-    if((dir = opendir(".")) == NULL){
+    if((dir = opendir(getRelativeReference(".", argv[3]))) == NULL){
         perror("Erreur lors de l'ouverture du fichier");
         result = 1;
         goto cleanup_return;
@@ -388,7 +382,7 @@ int cmd_for(int argc, char **argv){
         if(strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0 || (a_option == 0 && entry->d_name[0] == '.') || (extension != NULL && strcmp(extension, extract_extension(entry->d_name)))) continue;
         else{
             int bufsize = argc - (firstind) - 2;
-            char **command = split_argv_for(bufsize, argv + firstind + 1, argc - firstind, buf, entry->d_name, varname);
+            char **command = split_argv_for(bufsize, argv + firstind + 1, argc - firstind, argv[3], entry->d_name, varname);
             applyCommand(command, &result);
         }
     }

@@ -96,13 +96,14 @@ int partSize(char **argv){
 char * getRelativeReference(char *dirname, char *filename){
     char *res = NULL;
     if((res = malloc(strlen(dirname) + strlen(filename) + 2)) == NULL) goto error;
+    res[0] = '\0';
 
-    if(strcpy(res, dirname) == NULL) goto error;
+    if(strcmp(dirname, ".") != 0 || strcmp(dirname, "./") != 0) strcat(res, dirname);
 
-    if(res[strlen(res)-1] != '/') if(strcat(res, "/") == NULL) goto error;
+    if(res[strlen(res)-1] != '/' || (strlen(filename) != 0 && filename[0] != '/')) strcat(res, "/");
     
 
-    if(strcat(res, filename) == NULL) goto error;
+    strcat(res, filename);
 
     return res;
     
@@ -219,11 +220,7 @@ char ** split_argv_for(int bufSize, char **argv, int argvsize, char *dirname, ch
     if((res = malloc((bufSize + 1) * sizeof(char *))) == NULL) goto error;
     for(i = 0; i < argvsize-1; i++){
         if(strcmp(varname, argv[i]) == 0){
-            if((res[i] = malloc(strlen(filename) + 1)) == NULL) goto error;
-            res[i] = filename;
-        }
-        else if(strlen(argv[i]) > 2 && argv[i][0] == '.' && argv[i][1] == '/'){
-            char *newref = getRelativeReference(dirname, argv[i]);
+            char *newref = getRelativeReference(dirname, filename);
             if((res[i] = malloc(strlen(newref) + 1)) == NULL) goto error;
             strcpy(res[i], newref);
         }
