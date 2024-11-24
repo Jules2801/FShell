@@ -36,11 +36,24 @@ int cmd_cd(char **command);
  * @param new_directory le chemin du nouveau repertoire courant
  */
 void update_directories(const char *new_directory) {
+    if(new_directory == NULL) {
+        char *s = "Erreur: le nouveau répertoire est NULL.\n";
+        write(2, s, strlen(s));
+        return;
+    }
+
+    char *new_directory_copy = strdup(new_directory);
+    if (new_directory_copy == NULL) {
+        fprintf(stderr, "Erreur: Échec de l'allocation mémoire pour le nouveau répertoire.\n");
+        return;
+    }
+
     if (previous_directory != NULL) {
         free(previous_directory);
     }
+
     previous_directory = current_directory;
-    current_directory = strdup(new_directory);
+    current_directory = new_directory_copy;
 }
 
 /**
