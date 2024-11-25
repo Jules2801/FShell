@@ -149,17 +149,11 @@ char *replace_var(char *arg, char *var, char *name){
     char *buf;
     int bufsize = 0;
     int i = 0;
+    
     while(i < strlen(arg)){
-        if(arg[i] == '$'){
-            if(i + strlen(var) >= strlen(arg)) break;
-            else if(isEqualFirst(arg+i, var)){
-                bufsize += strlen(name);
-                i += strlen(var);
-            }
-            else{
-                bufsize++;
-                i++;
-            }
+        if(arg[i] == '$' && isEqualFirst(arg + i + 1, var)){
+            bufsize += strlen(name);
+            i += strlen(var);
         }
         else{
             bufsize++;
@@ -167,7 +161,7 @@ char *replace_var(char *arg, char *var, char *name){
         }
     }
 
-    if((buf = malloc(((bufsize) + 1) * sizeof(char))) == NULL){
+    if((buf = malloc(bufsize + 1)) == NULL){
         perror("Erreur lors de l'allocation mémoire");
         exit(1);
     }
@@ -175,33 +169,17 @@ char *replace_var(char *arg, char *var, char *name){
     i = 0;
     int j = 0;
     while(j < bufsize){
-        if(arg[i] == '$'){
-            if(i + strlen(var) >= strlen(arg)){
-                buf[j] = arg[i];
-                i++;
-                j++;
-            }
-            else if (isEqualFirst(arg+i, var)){
-                for(int k = 0; k < strlen(name); k++){
-                    buf[j] = name[k];
-                    j++;
-                }
-                i += strlen(var);
-            }
-            else{
-                buf[j] = arg[i];
-                i++;
-                j++;
-            }
+        if(arg[i] == '$' && isEqualFirst(arg + i + 1, var)){
+                strcpy(buf + j, name);
+                j += strlen(name);
+                i += strlen(var) + 1;
         }
         else{
-            buf[j] = arg[i];
-            i++;
-            j++;
+            buf[j++] = arg[i++];
         }
     }
 
-    buf[bufsize] = '\0';
+    buf[j] = '\0';
     return buf;
 }
 
