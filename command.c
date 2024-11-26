@@ -11,6 +11,7 @@
 #include "global.h"
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <sys/stat.h>
 
 int commande_externe(char **command);
 
@@ -293,7 +294,7 @@ int cmd_for(int argc, char **argv){
     int a_option = 0;
     int r_option = 0;
     char *extension = NULL;
-    char type;
+    char type = '\0';
     int max_parralel = -1;
 
     char *s = "Erreur : option inconnue ou argument manquant\n";
@@ -335,6 +336,7 @@ int cmd_for(int argc, char **argv){
     }
 
     int opt;
+    optind = 1;
     while((opt = getopt(argc, argv+3, "+:Are:t:p:")) != -1){
         switch(opt){
             case 'A':
@@ -360,8 +362,8 @@ int cmd_for(int argc, char **argv){
                 break;
 
             case 't' :
-                if(strlen(optarg) != 1){
-                    char *s = "Vous devez fournir un caractère\n";
+                if(strlen(optarg) != 1 || (*optarg != 'f' && *optarg != 'd' && *optarg != 'l' && *optarg != 'p')){
+                    char *s = "Vous devez fournir un caractère valide (f pour les fichiers ordinaires, d pour les répertires, l pour les liens symboliques, p pour les tubes).\n";
                     write(STDERR_FILENO, s, strlen(s));
                     result = 1;
                     goto cleanup_return;
@@ -394,13 +396,40 @@ int cmd_for(int argc, char **argv){
         goto cleanup_return;
     }
 
+    struct stat st;
     while((entry = readdir(dir)) != NULL){
-        if(strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0 || (a_option == 0 && entry->d_name[0] == '.') || (extension != NULL && strcmp(extension, extract_extension(entry->d_name)))) continue;
+        char *newref = getRelativeReference(argv[3], entry->d_name);
+        if(lstat(newref, &st) == -1){
+            result = 1;
+            goto cleanup_return;
+        }
+        if(strcmp(entry->d_name, ".") == 0 
+        || strcmp(entry->d_name, "..") == 0 
+        || (a_option == 0 && entry->d_name[0] == '.') 
+        || (extension != NULL && strcmp(extension, extract_extension(entry->d_name)))
+        || (type != '\0' && !isSameType(st.st_mode, type))
+        ) continue;
         else{
             int bufsize = argc - (firstind) - 2;
-            char **command = split_argv_for(bufsize, argv + firstind + 1, argc - firstind, argv[3], entry->d_name, varname);
+            char **command = split_argv_for(bufsize, argv + firstind + 1, argc - firstind, newref, varname);
             applyCommand(command, &result);
+            if(isSameType(st.st_mode, 'd') && r_option){
+                char **newpart = copyPartition(argv);
+                free(newpart[3]);
+
+                if((newpart[3] = malloc(strlen(newref) + 1)) == NULL){
+                    perror("Erreur lors de l'allocation mémoire");
+                    free_double_buffer(newpart, argc);
+                    result = 1;
+                    goto cleanup_return;
+                }
+
+                strcpy(newpart[3], newref);
+
+                result = cmd_for(argc, newpart);
+            }
         }
+        free(newref);
     }
 
     goto cleanup_return;

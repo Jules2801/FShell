@@ -6,6 +6,7 @@
 #include <stdbool.h>
 #include <ctype.h>
 #include <dirent.h>
+#include <sys/stat.h>
 
 /**
  * Fonction permettant de compter le nombre de mots dans une chaîne de caractère.
@@ -130,12 +131,12 @@ void free_double_buffer(char **buffer, int bufsize){
  * @param buf2 Chaîne de caractère qui sera comparé avec buf1.
  * @return 1 si buf2 est bien égale au début de buf1 et 0 sinon.
  */
-int isEqualFirst(char *buf1, char *buf2){
-    if(strlen(buf2) > strlen(buf1)) return 0;
-    for(int i = 0 ; i < strlen(buf2); i++){
-        if(buf1[i] != buf2 [i]) return 0;
+int isEqualFirst(const char *str, const char *var) {
+    while (*var && *str == *var) {
+        str++;
+        var++;
     }
-    return 1;
+    return *var == '\0';
 }
 
 /**
@@ -149,9 +150,12 @@ char *replace_var(char *arg, char *var, char *name){
     char *buf;
     int bufsize = 0;
     int i = 0;
-    
-    while(i < strlen(arg)){
-        if(arg[i] == '$' && isEqualFirst(arg + i + 1, var)){
+
+    //printf("%s\n", arg);
+
+    int len = strlen(arg);
+    while(i < len){
+        if(arg[i] == '$' && isEqualFirst(arg + i, var)){
             bufsize += strlen(name);
             i += strlen(var);
         }
@@ -161,6 +165,8 @@ char *replace_var(char *arg, char *var, char *name){
         }
     }
 
+    //printf("%d\n", bufsize);
+
     if((buf = malloc(bufsize + 1)) == NULL){
         perror("Erreur lors de l'allocation mémoire");
         exit(1);
@@ -168,16 +174,16 @@ char *replace_var(char *arg, char *var, char *name){
 
     i = 0;
     int j = 0;
-    while(j < bufsize){
-        if(arg[i] == '$' && isEqualFirst(arg + i + 1, var)){
-                strcpy(buf + j, name);
-                j += strlen(name);
-                i += strlen(var) + 1;
+    while(i < len){
+        if(arg[i] == '$' && isEqualFirst(arg + i, var)){
+            strcpy(buf + j, name);
+            j += strlen(name);
+            i += strlen(var);
         }
-        else{
-            buf[j++] = arg[i++];
-        }
+        else buf[j++] = arg[i++];
     }
+
+    printf("%d c'est le dernier buffer\n", j);
 
     buf[j] = '\0';
     return buf;
@@ -190,23 +196,21 @@ char *replace_var(char *arg, char *var, char *name){
  * @param filename Nom de l'entrée.
  * @return Nouvelle partition de chaîne de caractère avec $F remplacé par la référence de l'entrée.
  */
-char ** split_argv_for(int bufSize, char **argv, int argvsize, char *dirname, char *filename, char *varname){
+char ** split_argv_for(int bufSize, char **argv, int argvsize, char *ref, char *varname){
     char **res = NULL;
     int i;
     if((res = malloc((bufSize + 1) * sizeof(char *))) == NULL) goto error;
-    for(i = 0; i < argvsize-1; i++){
+    for(i = 0; i < argvsize-2; i++){
         if(strcmp(varname, argv[i]) == 0){
-            char *newref = getRelativeReference(dirname, filename);
-            if((res[i] = malloc(strlen(newref) + 1)) == NULL) goto error;
-            strcpy(res[i], newref);
-            free(newref);
+            if((res[i] = malloc(strlen(ref) + 1)) == NULL) goto error;
+            strcpy(res[i], ref);
         }
         
         else{
             if((res[i] = malloc(strlen(argv[i]) + 1)) == NULL) goto error;
-            char *newvar = replace_var(argv[i], varname, filename);
-            strcpy(res[i], newvar);
-            free(newvar);
+            //char *newvar = replace_var(argv[i], varname, ref);
+            strcpy(res[i], argv[i]);
+            //free(newvar);
         };
     }
     res[bufSize] = (char *) NULL;
@@ -414,4 +418,46 @@ char ***makeStructuredCommand(char **partition, int *size){
     *size = pos;
 
     return structuredCommand;
+}
+
+/**
+ * Fonction permettant de savoir si un type de fichier correspond au bon caractère
+ * @param filetype Le type de fichier
+ * @param type Le caractère représetant le type de fichier (f pour fichier ordinaire, d pour les répertoires, l pour les liens symboliques, p pour les tubes).
+ * @return 1 si cela correspond bien au type de fichier et 0 sinon
+ */
+int isSameType(mode_t mode, char f){
+    switch(f){
+        case 'f': return S_ISREG(mode);
+        case 'd': return S_ISDIR(mode);
+        case 'l': return S_ISLNK(mode);
+        case 'p': return S_ISFIFO(mode);
+        default: return false;
+    }
+}
+
+/**
+ * Fonction permettant de copier une partition de chaîne de caractère.
+ */
+
+char **copyPartition(char **partition){
+    int size = partSize(partition);
+    char **buf;
+
+    if((buf = malloc(size * sizeof(char *))) == NULL){
+        perror("Erreur lors de l'allocation mémoire");
+        exit(1);
+    }
+
+    for(int i = 0; i < size; i++){
+        if((buf[i] = malloc(strlen(partition[i]) + 1)) == NULL){
+            perror("Erreur lors de l'allocation mémoire");
+            free_double_buffer(buf, size);
+            exit(1);
+        }
+
+        strcpy(buf[i], partition[i]);
+    }
+
+    return buf;
 }
