@@ -246,6 +246,12 @@ int cmd_pwd(char **command) {
 
     char cwd[1024];
 
+    if(partSize(command) != 1){
+        char *s = "pwd: trop d'arguments\n";
+        write(2, s, strlen(s));
+        return 1;
+    }
+
     if (getcwd(cwd, sizeof(cwd)) != NULL) {
         strcat(cwd, "\n");
         write(1, cwd, strlen(cwd));
@@ -264,6 +270,11 @@ int cmd_cd(char **command){
             write(1,"$HOME not set\n",15);
             return 1;
         }
+    }
+    if(partSize(command)>2){
+        char *s = "cd: trop d'arguments\n";
+        write(2, s, strlen(s));
+        return 1;
     }
     else{
         if(strcmp(command[1],"-")==0){
