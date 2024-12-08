@@ -196,13 +196,18 @@ int cmd_exit(char  **command, int *error) {
         if(*error < 0) exit(255);
         exit(*error);
     }
-    else{
+    else if(size == 2){
         int err = stringToPositiveInteger(command[1]);
         if(err == -1){
             write(2, errorMessage, strlen(errorMessage));
             return 1;
         }
         else exit(err);
+    }
+    else{
+        char *s = "exit: trop d'arguments.\n";
+        write(2, s, strlen(s));
+        return 1;
     }
 }
 
