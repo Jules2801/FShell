@@ -183,8 +183,6 @@ char *replace_var(char *arg, char *var, char *name){
         else buf[j++] = arg[i++];
     }
 
-    printf("%d c'est le dernier buffer\n", j);
-
     buf[j] = '\0';
     return buf;
 }
@@ -207,10 +205,10 @@ char ** split_argv_for(int bufSize, char **argv, int argvsize, char *ref, char *
         }
         
         else{
-            if((res[i] = malloc(strlen(argv[i]) + 1)) == NULL) goto error;
-            //char *newvar = replace_var(argv[i], varname, ref);
-            strcpy(res[i], argv[i]);
-            //free(newvar);
+            char *newvar = replace_var(argv[i], varname, ref);
+            if((res[i] = malloc(strlen(newvar) + 1)) == NULL) goto error;
+            strcpy(res[i], newvar);
+            free(newvar);
         };
     }
     res[bufSize] = (char *) NULL;
