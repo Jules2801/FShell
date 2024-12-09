@@ -264,18 +264,17 @@ int cmd_pwd(char **command) {
 
 int cmd_cd(char **command){
     char *path;
+    if(partSize(command)>2){
+        char *s = "cd: trop d'arguments\n";
+        write(2, s, strlen(s));
+        return 1;
+    }
     if(partSize(command)==1){
         path = getenv("HOME");
         if(path==NULL){
             write(1,"$HOME not set\n",15);
             return 1;
         }
-        return 0;
-    }
-    if(partSize(command)>2){
-        char *s = "cd: trop d'arguments\n";
-        write(2, s, strlen(s));
-        return 1;
     }
     else{
         if(strcmp(command[1],"-")==0){
