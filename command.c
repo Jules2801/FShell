@@ -76,7 +76,7 @@ void applyCommand(char **command, int *error){
         else if(strcmp(command[0], "exit") == 0) *error = exitCommand(command, error);
         else if(strcmp(command[0], "ftype") == 0) *error = ftypeCommand(command);
         else if(strcmp(command[0], "for") == 0) *error =  forCommand(command);
-        else if(strcmp(command[0], "cd") == 0) *error =  cdCommand(command);
+        else if(strcmp(command[0], "cd") == 0) *error = cdCommand(command);
         else *error = commande_externe(command);
     }
 }
@@ -270,6 +270,7 @@ int cmd_cd(char **command){
             write(1,"$HOME not set\n",15);
             return 1;
         }
+        return 0;
     }
     if(partSize(command)>2){
         char *s = "cd: trop d'arguments\n";

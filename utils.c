@@ -8,6 +8,8 @@
 #include <dirent.h>
 #include <sys/stat.h>
 
+void free_double_buffer(char **buffer, int bufsize);
+
 /**
  * Fonction permettant de compter le nombre de mots dans une chaîne de caractère.
  * @param command Une chaine de caractêre.
@@ -55,6 +57,7 @@ char **split_command(char *command){
                 buffer[count] = malloc((wordLen + 1) * sizeof(char));
                 if (buffer[count] == NULL) {
                     perror("Erreur lors de l'allocation mémoire");
+                    free_double_buffer(buffer, count);
                     exit(1);
                 }
                 strncpy(buffer[count], command + start, wordLen);
@@ -71,7 +74,11 @@ char **split_command(char *command){
         }
     }
     
-    *(buffer+count) = (char *) NULL;
+    if((buffer[count] = malloc(sizeof(char *))) == NULL){
+        perror("Erreur lors de l'allocation mémoire");
+        free_double_buffer(buffer, count);
+    }
+    buffer[count] = (char *) NULL;
     return buffer;
 }
 
