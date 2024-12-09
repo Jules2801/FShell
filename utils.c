@@ -74,10 +74,6 @@ char **split_command(char *command){
         }
     }
     
-    if((buffer[count] = malloc(sizeof(char *))) == NULL){
-        perror("Erreur lors de l'allocation mémoire");
-        free_double_buffer(buffer, count);
-    }
     buffer[count] = (char *) NULL;
     return buffer;
 }
