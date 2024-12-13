@@ -445,7 +445,7 @@ char **copyPartition(char **partition){
     int size = partSize(partition);
     char **buf;
 
-    if((buf = malloc(size * sizeof(char *))) == NULL){
+    if((buf = malloc((size + 1) * sizeof(char *))) == NULL){
         perror("Erreur lors de l'allocation mémoire");
         exit(1);
     }
@@ -459,6 +459,8 @@ char **copyPartition(char **partition){
 
         strcpy(buf[i], partition[i]);
     }
+
+    buf[size] = (char *) NULL;
 
     return buf;
 }
