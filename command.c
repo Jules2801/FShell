@@ -12,6 +12,8 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
+#include <fcntl.h>
+#include "redirection.h"
 
 int commande_externe(char **command);
 
@@ -45,7 +47,8 @@ void update_directories(const char *new_directory) {
 
     char *new_directory_copy = strdup(new_directory);
     if (new_directory_copy == NULL) {
-        fprintf(stderr, "Erreur: Échec de l'allocation mémoire pour le nouveau répertoire.\n");
+        char *s = "Erreur: Échec de l'allocation mémoire pour le nouveau répertoire.\n";
+        write(2, s, strlen(s));
         return;
     }
 
@@ -72,12 +75,77 @@ void applyCommand(char **command, int *error){
         free(commands);
     }
     else{
-        if(strcmp(command[0], "pwd") == 0) *error = pwdCommand(command);
-        else if(strcmp(command[0], "exit") == 0) *error = exitCommand(command, error);
-        else if(strcmp(command[0], "ftype") == 0) *error = ftypeCommand(command);
-        else if(strcmp(command[0], "for") == 0) *error =  forCommand(command);
-        else if(strcmp(command[0], "cd") == 0) *error = cdCommand(command);
-        else *error = commande_externe(command);
+        int countIn = 0;
+        int oldIn = dup(STDIN_FILENO);
+
+        int countOut = 0;
+        int oldOut = dup(STDOUT_FILENO);
+
+        int countErr = 0;
+        int oldErr = dup(STDERR_FILENO);
+
+        Redirection **inList = get_all_stdin(command, &countIn);
+        Redirection **outList = get_all_stdout(command, &countOut);
+        Redirection **errList = get_all_stderr(command, &countErr);
+
+        char **command_without_red = remove_all_redirection(command);
+
+        if(countIn != 0){
+            isInRed = 1;
+            int fd = getFile(inList[0]);
+            if(fd == -1){
+                char *s = "Erreur lors de la redirection\n";
+                write(2, s, strlen(s));
+                *error = 1;
+                return;
+            }
+            dup2(fd, STDIN_FILENO);
+        }
+
+        if(countOut != 0){
+            isOutRed = 1;
+            int fd = getFile(outList[0]);
+            if(fd == -1){
+                char *s = "Erreur lors de la redirection\n";
+                write(2, s, strlen(s));
+                *error = 1;
+                return;
+            }
+            dup2(fd, STDOUT_FILENO);
+        }
+
+        if(countErr != 0){
+            isErrRed = 1;
+            int fd = getFile(errList[0]);
+            if(fd == -1){
+                char *s = "Erreur lors de la redirection\n";
+                write(2, s, strlen(s));
+                *error = 1;
+                return;
+            }
+            dup2(fd, STDERR_FILENO);
+        }
+
+        if(strcmp(command_without_red[0], "pwd") == 0) *error = pwdCommand(command_without_red);
+        else if(strcmp(command_without_red[0], "exit") == 0) *error = exitCommand(command_without_red, error);
+        else if(strcmp(command_without_red[0], "ftype") == 0) *error = ftypeCommand(command_without_red);
+        else if(strcmp(command_without_red[0], "for") == 0) *error =  forCommand(command_without_red);
+        else if(strcmp(command[0], "cd") == 0) *error = cdCommand(command_without_red);
+        else *error = commande_externe(command_without_red);
+
+        free_double_buffer(command_without_red, partSize(command_without_red));
+        free_redirection_list(inList, countIn);
+        free_redirection_list(outList, countOut);
+        free_redirection_list(errList, countErr);
+
+        dup2(oldIn, STDIN_FILENO);
+        isInRed = 0;
+
+        dup2(oldOut, STDOUT_FILENO);
+        isOutRed = 0;
+
+        dup2(oldErr, STDERR_FILENO);
+        isErrRed = 0;
     }
 }
 
@@ -194,7 +262,7 @@ int cmd_exit(char  **command, int *error) {
     }
     else if(size == 1){
         if(*error < 0) exit(255);
-        exit(*error);
+        else exit(*error);
     }
     else if(size == 2){
         int err = stringToPositiveInteger(command[1]);
@@ -214,15 +282,29 @@ int cmd_exit(char  **command, int *error) {
 int cmd_ftype(char **command) {
     char *errorMessage = "usage: ftype REF\n";
     int size = partSize(command);
+    char *entry;
 
-    if(size != 2){
+    if(size == 0 || size > 2){
         write(2, errorMessage, strlen(errorMessage));
         return 1;
     }
 
+    else if(size == 1){
+        char buffer[256];
+        if(isInRed && (fgets(buffer, sizeof(buffer), stdin) != NULL)){
+            buffer[strcspn(buffer, "\n")] = '\0';
+            entry = buffer;
+        }
+        else{
+            write(2, errorMessage, strlen(errorMessage));
+            return 1;
+        }
+    }
+    else entry = command[1];
+
     struct stat statbuf;
 
-    if (lstat(command[1], &statbuf) == -1) {
+    if (lstat(entry, &statbuf) == -1) {
         perror("stat");
         return 1;
     }
@@ -270,10 +352,21 @@ int cmd_cd(char **command){
         return 1;
     }
     if(partSize(command)==1){
-        path = getenv("HOME");
-        if(path==NULL){
-            write(1,"$HOME not set\n",15);
-            return 1;
+        char buffer[256];
+        if(isInRed && (fgets(buffer, sizeof(buffer), stdin) != NULL)){
+            buffer[strcspn(buffer, "\n")] = '\0';
+            if (strlen(buffer) == 0) {
+                write(1, "Chemin non valide ou vide\n", 26);
+                return 1;
+            }
+            path = buffer;
+        }
+        else{
+            path = getenv("HOME");
+            if(path==NULL){
+                write(1,"$HOME not set\n",15);
+                return 1;
+            }
         }
     }
     else{

@@ -13,6 +13,9 @@
 
 char *previous_directory = NULL;
 char *current_directory = NULL;
+int isInRed = 0;
+int isOutRed = 0;
+int isErrRed = 0;
 
 
 
