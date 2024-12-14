@@ -8,17 +8,14 @@
 #include <ctype.h>
 #include <dirent.h>
 #include "utils.h"
+#include "commandList.h"
 
 
-
-typedef struct command{
-    
-    char **list ;
-    
-    int size;
-
-}command;
-
+/**
+ * Fonction permettant de créer une struct command
+ * @param fullcommand Chaîne de caractère
+ * @return Une struct commande ou NULL si erreur d'allocation mémoire
+ **/
 command *newCommand(char *fullcommand){
     command *newCommand = malloc(sizeof(command));
     if (!newCommand) {
@@ -45,6 +42,11 @@ command *newCommand(char *fullcommand){
     return newCommand;
 }
 
+
+/**
+ * Fonction permettant de libérer la mémoire d'une struct command
+ * @param command La struct à libérer
+ **/
 void freeCommand(command *command){
     if (!command) {
         return; //Dans le cas où command est NULL, on ne fait rien
@@ -53,23 +55,14 @@ void freeCommand(command *command){
     free(command);
 }
 
-typedef struct node {
-
-    command *data;
-
-    struct node *next;
-
-}node;
 
 
 
-typedef struct linkedList {
-
-    node* head;
-
-}linkedList;
-
-
+/**
+ * Fonction permettant de créer une liste chaînée 
+ * @param head une struct command
+ * @return Une liste chaînée ou NULL si problème d'allocation mémoire
+ **/
 linkedList *newLinkedList(command *head){
     linkedList *newlist = malloc(sizeof(linkedList));
     if(!newlist){
@@ -90,6 +83,11 @@ linkedList *newLinkedList(command *head){
 
 }
 
+/**
+ * Fonction permettant d'ajouter au début de la liste chainée
+ * @param list la liste chaînée
+ * @param data la struct commande à ajouter 
+ **/
 void addFirst(linkedList *list, command *data){
     node *newNode = malloc(sizeof(node));
 
@@ -103,6 +101,11 @@ void addFirst(linkedList *list, command *data){
     list->head = newNode;
 }
 
+/**
+ * Fonction permettant d'ajouter à la fin de la liste chaînée
+ * @param list la liste chaînée
+ * @param data la struct commande à ajouter 
+ **/
 void addLast(linkedList *list, command *data){
     node* newNode = (node*) malloc(sizeof(node));
 
@@ -129,7 +132,10 @@ void addLast(linkedList *list, command *data){
     }
 }
 
-
+/**
+ * Fonction permettant de libérer la mémoire d'un noeud
+ * @param noeud le noeud à libérer  
+ **/
 void freeNode(node *noeud) {
     
     if (!noeud) return;
@@ -142,7 +148,10 @@ void freeNode(node *noeud) {
     free(noeud);
 }
 
-
+/**
+ * Fonction permettant de libérer la mémoire d'une liste chaînée
+ * @param list la liste chaînée à libérer
+ **/
 void freeLinkedList(linkedList *list){
     if(!list){
         return;
