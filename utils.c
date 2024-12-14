@@ -84,6 +84,7 @@ char **split_command(char *command){
  * @return Taille de la partition.
  */
 int partSize(char **argv){
+    if(*(argv) == NULL) return 0;
     int i = 0;
     while(*(argv+i) != (char *) NULL){
         i++;
@@ -312,6 +313,7 @@ int isStructuredCommand(char **partition){
     char *s = "Usage: CMD_1 ; CMD_2 ; ... ; CMD_N\n";
     int hasSemi = 0;
     int hasBrace = 0;
+    int hasQuote = 0;
     int partsize = partSize(partition);
 
     if(strcmp(";", partition[0]) == 0 || strcmp(";", partition[partsize-1]) == 0){
@@ -322,7 +324,11 @@ int isStructuredCommand(char **partition){
     for(int i = 1; i < partsize-1; i++){
         if(strcmp(partition[i], "{") == 0) hasBrace = 1;
         else if(strcmp(partition[i], "}") == 0) hasBrace = 0;
-        else if (strcmp(partition[i], ";") == 0 && hasBrace == 0) return 1;
+        else if(strstr(partition[i], "\"") != NULL){
+            if(hasQuote == 0) hasQuote = 1;
+            else hasQuote = 0;
+        }
+        else if (strcmp(partition[i], ";") == 0 && hasBrace == 0 && hasQuote == 0) return 1;
     }
 
     return 0;
@@ -445,7 +451,7 @@ char **copyPartition(char **partition){
     int size = partSize(partition);
     char **buf;
 
-    if((buf = malloc((size + 1) * sizeof(char *))) == NULL){
+    if((buf = malloc((size+1) * sizeof(char *))) == NULL){
         perror("Erreur lors de l'allocation mémoire");
         exit(1);
     }
@@ -453,7 +459,7 @@ char **copyPartition(char **partition){
     for(int i = 0; i < size; i++){
         if((buf[i] = malloc(strlen(partition[i]) + 1)) == NULL){
             perror("Erreur lors de l'allocation mémoire");
-            free_double_buffer(buf, size);
+            free_double_buffer(buf, i);
             exit(1);
         }
 
