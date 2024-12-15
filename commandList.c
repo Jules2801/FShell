@@ -133,10 +133,49 @@ void addLast(linkedList *list, command *data){
 }
 
 /**
- * Fonction permettant de libérer la mémoire d'un noeud
+*Fonction permettant de supprimer le premier noeud de la liste chainé
+*@param list la liste chaînée
+*@return la liste chainée après suppression du premier noeud ou NULL si la liste est vide
+ */
+linkedList *itere(linkedList *list){
+    if(!list||!(list->head)){
+        return NULL;
+    }
+    node *tmp = list->head->next;
+    freeNode(list->head);
+    list->head = tmp;
+    return list;
+}
+
+/**
+*Fonction de recuperer la commande du premier noeud de la liste chainée
+*@param list la liste chaînée
+*@return la commande du premier noeud de la liste chainée ou NULL si la liste est vide
+ */
+command *getCommand(linkedList *list){
+    if(!list||!(list->head)){
+        return NULL;
+    }
+    return list->head->data;
+}
+
+/**
+ * Fonction permettant de libérer un seul noeud
  * @param noeud le noeud à libérer  
  **/
 void freeNode(node *noeud) {
+    if (!noeud) return;
+    freeCommand(noeud->data); 
+    noeud->next = NULL;
+    free(noeud);             
+}
+
+
+/**
+ * Fonction permettant de libérer récursivement tous les noeuds parents
+ * @param noeud le noeud à libérer  
+ **/
+void freeAllNodes(node *noeud) {
     
     if (!noeud) return;
     

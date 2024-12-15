@@ -75,6 +75,25 @@ void addFirst(linkedList *list, command *data);
  **/
 void addLast(linkedList *list, command *data);
 
+/**
+ * Fonction permettant d'itérer sur la liste chaînée en supprimant le premier élément
+ * @param list Pointeur vers la liste chaînée
+ * @return Un pointeur vers la liste chaînée mise à jour ou NULL si la liste est vide
+ **/
+linkedList *itere(linkedList *list);
+
+/**
+ * Fonction permettant de récupérer la commande du premier noeud de la liste
+ * @param list Pointeur vers la liste chaînée
+ * @return Un pointeur vers la commande du premier noeud ou NULL si la liste est vide
+ **/
+command *getCommand(linkedList *list);
+
+/**
+ * Fonction permettant de libérer récursivement tous les noeuds parents
+ * @param noeud Le noeud à partir duquel commencer la libération
+ **/
+void freeAllNodes(node *noeud);
 
 /**
  * Fonction permettant de libérer la mémoire d'un noeud
