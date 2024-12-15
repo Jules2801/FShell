@@ -195,6 +195,6 @@ void freeLinkedList(linkedList *list){
     if(!list){
         return;
     }
-    freeNode(list->head);
+    freeAllNodes(list->head);
  
 }
