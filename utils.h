@@ -13,4 +13,7 @@ char ***makeStructuredCommand(char **partition, int *size);
 char * getRelativeReference(char *dirname, char *filename);
 int isSameType(mode_t mode, char f);
 char **copyPartition(char **partition);
+char *remove_extension_from_file(const char *arg);
+int isBraceGood(char **partition);
+int isIllegalName(char *argv);
 #endif

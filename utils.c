@@ -275,10 +275,52 @@ char *extract_extension(char* arg){
     char *res;
     if((res = malloc((count + 1) * sizeof(char))) == NULL){
         perror("Erreur lors de l'allocation mémoire");
-        exit(1);
+        return NULL;
     }
 
     strcpy(res, (arg+(strlen(arg)-count)));
+
+    return res;
+}
+
+int isBraceGood(char **partition){
+    int size = partSize(partition);
+    int braceOpen = 0;
+
+    for(int i = 0; i < size; i++){
+        if(strcmp(partition[i], "{") == 0) braceOpen++;
+        else if(strcmp(partition[i], "}") == 0){
+            if(braceOpen == 0) return 0;
+            braceOpen--;
+        }
+    }
+
+    return braceOpen == 0;
+}
+
+int isIllegalName(char *argv){
+    return strcmp(argv, "{") == 0 || strcmp(argv, "}") == 0 || strcmp(argv, "<") == 0 || strcmp(argv, ">") == 0 || strcmp(argv, "|") == 0 || strcmp(argv, ";") == 0 || strcmp(argv, "$") == 0;
+}
+
+char *remove_extension_from_file(const char *arg){
+    if (arg == NULL || strlen(arg) == 0) 
+        return NULL;
+
+    const char *last_dot = strrchr(arg, '.');
+
+    if (last_dot == NULL || last_dot == arg) 
+        return strdup(arg);
+
+    size_t base_length = last_dot - arg;
+
+    char *res = malloc(base_length + 1);
+    if (res == NULL) {
+        perror("Erreur lors de l'allocation mémoire");
+        return NULL;
+    }
+
+    strncpy(res, arg, base_length);
+    res[base_length] = '\0';
 
     return res;
 }
