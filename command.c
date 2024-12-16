@@ -13,25 +13,26 @@
 #include <sys/wait.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include "commandList.h"
 #include "redirection.h"
 
-int commande_externe(char **command);
+int commande_externe(command *command);
 
-int forCommand(char **command);
-int cmd_for(int argc, char **argv);
+int forCommand(command *command);
+int cmd_for(command *command);
 
-int exitCommand(char **command, int *error);
-int cmd_exit(char **command, int *error);
+int exitCommand(command *command, int *error);
+int cmd_exit(command *command, int *error);
 
 
-int ftypeCommand(char **command);
-int cmd_ftype(char **command);
+int ftypeCommand(command *command);
+int cmd_ftype(command *command);
 
-int pwdCommand(char **command);
-int cmd_pwd(char **command);
+int pwdCommand(command *command);
+int cmd_pwd(command *command);
 
-int cdCommand(char **command);
-int cmd_cd(char **command);
+int cdCommand(command *command);
+int cmd_cd(command *command);
 
 
 /**
@@ -64,15 +65,16 @@ void update_directories(const char *new_directory) {
  * Fonction permettant d'appliquer toutes les fonctions internes/externes.
  * @param command Tout ce qui sera utiles pour appliquer la commande externe, telle que son nom et ses options.
  */
-void applyCommand(char **command, int *error){
-    if(isStructuredCommand(command)){
+void applyCommand(command *commande, int *error){
+    if(isStructuredCommand(commande)){
         int size;
-        char ***commands = makeStructuredCommand(command, &size);
+        command **commandes = makeStructuredCommand(commande, &size);
+        
         for(int i = 0; i < size; i++){
-            applyCommand(commands[i], error);
-            free_double_buffer(commands[i], partSize(commands[i]));
+            applyCommand(commandes[i], error);
+            freeCommand(commandes[i]);
         }
-        free(commands);
+        free(commandes);
     }
     else{
         int countIn = 0;
@@ -84,9 +86,9 @@ void applyCommand(char **command, int *error){
         int countErr = 0;
         int oldErr = dup(STDERR_FILENO);
 
-        Redirection **inList = get_all_stdin(command, &countIn);
-        Redirection **outList = get_all_stdout(command, &countOut);
-        Redirection **errList = get_all_stderr(command, &countErr);
+        Redirection **inList = get_all_stdin(commande, &countIn);
+        Redirection **outList = get_all_stdout(commande, &countOut);
+        Redirection **errList = get_all_stderr(commande, &countErr);
 
         if(countIn + countOut + countErr < 0){
             char *s = "Mauvaise utilisation des redirections\n";
@@ -95,7 +97,8 @@ void applyCommand(char **command, int *error){
             return;
         }
 
-        char **command_without_red = remove_all_redirection(command);
+        command *command_without_red = remove_all_redirection(commande);
+        char **partitionWithoutRed = command_without_red->list;
 
         if(countIn != 0){
             isInRed = 1;
@@ -133,14 +136,14 @@ void applyCommand(char **command, int *error){
             dup2(fd, STDERR_FILENO);
         }
 
-        if(strcmp(command_without_red[0], "pwd") == 0) *error = pwdCommand(command_without_red);
-        else if(strcmp(command_without_red[0], "exit") == 0) *error = exitCommand(command_without_red, error);
-        else if(strcmp(command_without_red[0], "ftype") == 0) *error = ftypeCommand(command_without_red);
-        else if(strcmp(command_without_red[0], "for") == 0) *error =  forCommand(command_without_red);
-        else if(strcmp(command[0], "cd") == 0) *error = cdCommand(command_without_red);
+        if(strcmp(partitionWithoutRed[0], "pwd") == 0) *error = pwdCommand(command_without_red);
+        else if(strcmp(partitionWithoutRed[0], "exit") == 0) *error = exitCommand(command_without_red, error);
+        else if(strcmp(partitionWithoutRed[0], "ftype") == 0) *error = ftypeCommand(command_without_red);
+        else if(strcmp(partitionWithoutRed[0], "for") == 0) *error =  forCommand(command_without_red);
+        else if(strcmp(partitionWithoutRed[0], "cd") == 0) *error = cdCommand(command_without_red);
         else *error = commande_externe(command_without_red);
 
-        free_double_buffer(command_without_red, partSize(command_without_red));
+        freeCommand(command_without_red);
         free_redirection_list(inList, countIn);
         free_redirection_list(outList, countOut);
         free_redirection_list(errList, countErr);
@@ -165,10 +168,10 @@ void applyCommand(char **command, int *error){
  * @param size Taille de la partition de chaîne de caractère.
  * @return Un entier supérieure à 1 si une erreur s'est produite pendant le processus et 0 si tout s'est bien passé.
  */
-int forCommand(char **command){
+int forCommand(command *commande){
     pid_t pid = 0;
     if((pid = fork()) == 0){
-        exit(cmd_for(partSize(command), command));
+        exit(cmd_for(commande));
     }
     else{
         int status;
@@ -183,7 +186,7 @@ int forCommand(char **command){
  * Fonction permettant d'appliquer la commande pwd.
  * @return Un entier supérieure à 1 si une erreur s'est produite pendant le processus et 0 si tout s'est bien passé.
  */
-int pwdCommand(char **command){
+int pwdCommand(command *command){
     pid_t pid = 0;
     if((pid = fork()) == 0){
         exit(cmd_pwd(command));
@@ -201,18 +204,18 @@ int pwdCommand(char **command){
  * Fonction permettant d'appliquer la commande exit.
  * @return Un entier supérieure à 1 si une erreur s'est produite pendant le processus et 0 si tout s'est bien passé.
  */
-int exitCommand(char **command, int *error){
-    return cmd_exit(command, error);
+int exitCommand(command *commande, int *error){
+    return cmd_exit(commande, error);
 }
 
 /**
  * Fonction permettant d'appliquer la commande exit.
  * @return Un entier supérieure à 1 si une erreur s'est produite pendant le processus et 0 si tout s'est bien passé.
  */
-int ftypeCommand(char **command){
+int ftypeCommand(command *commande){
     pid_t pid = 0;
     if((pid = fork()) == 0){
-        exit(cmd_ftype(command));
+        exit(cmd_ftype(commande));
     }
     else{
         int status;
@@ -227,8 +230,8 @@ int ftypeCommand(char **command){
  * Fonction permettant d'appliquer la commande cd.
  * @return Un entier supérieure à 1 si une erreur s'est produite pendant le processus et 0 si tout s'est bien passé.
  */
-int cdCommand(char **command){
-    return cmd_cd(command);   
+int cdCommand(command *commande){
+    return cmd_cd(commande);   
 }
 
 /**
@@ -236,7 +239,7 @@ int cdCommand(char **command){
  * @param command Tout ce qui sera utiles pour appliquer la commande externe, telle que son nom et ses options.
  * @return Un entier supérieure à 1 si une erreur s'est produite pendant le recouvrement et 0 si tout s'est bien passé.
  */
-int commande_externe(char **command){
+int commande_externe(command *commande){
     pid_t pid = fork();
     if(pid == -1){
         perror("Erreur lors de la création du processus");
@@ -244,9 +247,12 @@ int commande_externe(char **command){
     }
 
     if(pid == 0){
-        if(strlen(command[0]) > 2 && command[0][0] == '.' && command[0][1] == '/') execv(command[0], command);
-        execvp(command[0], command);
-        char *s = concat("fsh: command not found: ", command[0]);
+
+        char **partition = commande->list;
+
+        if(strlen(partition[0]) > 2 && partition[0][0] == '.' && partition[0][1] == '/') execv(partition[0], partition);
+        execvp(partition[0], partition);
+        char *s = concat("fsh: command not found: ", partition[0]);
         write(2, s, strlen(s));
         free(s);
         exit(1);
@@ -262,9 +268,9 @@ int commande_externe(char **command){
 }
 
 
-int cmd_exit(char  **command, int *error) {
+int cmd_exit(command *commande, int *error) {
     char *errorMessage = "usage: exit [VAL]\n";
-    int size = partSize(command);
+    int size = commande->size;
 
     if(size == 0){
         write(2, errorMessage, strlen(errorMessage));
@@ -275,7 +281,7 @@ int cmd_exit(char  **command, int *error) {
         else exit(*error);
     }
     else if(size == 2){
-        int err = stringToPositiveInteger(command[1]);
+        int err = stringToPositiveInteger(commande->list[1]);
         if(err == -1){
             write(2, errorMessage, strlen(errorMessage));
             return 1;
@@ -289,9 +295,9 @@ int cmd_exit(char  **command, int *error) {
     }
 }
 
-int cmd_ftype(char **command) {
+int cmd_ftype(command *commande) {
     char *errorMessage = "usage: ftype REF\n";
-    int size = partSize(command);
+    int size = commande->size;
     char *entry;
 
     if(size == 0 || size > 2){
@@ -310,7 +316,7 @@ int cmd_ftype(char **command) {
             return 1;
         }
     }
-    else entry = command[1];
+    else entry = commande->list[1];
 
     struct stat statbuf;
 
@@ -334,11 +340,11 @@ int cmd_ftype(char **command) {
     return 0;
 }
 
-int cmd_pwd(char **command) {
+int cmd_pwd(command *commande) {
 
     char cwd[1024];
 
-    if(partSize(command) != 1){
+    if(commande->size != 1){
         char *s = "pwd: trop d'arguments\n";
         write(2, s, strlen(s));
         return 1;
@@ -354,14 +360,15 @@ int cmd_pwd(char **command) {
     }
 }
 
-int cmd_cd(char **command){
+int cmd_cd(command *commande){
     char *path;
-    if(partSize(command)>2){
+    int partSize = commande->size;
+    if(partSize>2){
         char *s = "cd: trop d'arguments\n";
         write(2, s, strlen(s));
         return 1;
     }
-    if(partSize(command)==1){
+    if(partSize==1){
         char buffer[256];
         if(isInRed && (fgets(buffer, sizeof(buffer), stdin) != NULL)){
             buffer[strcspn(buffer, "\n")] = '\0';
@@ -380,7 +387,8 @@ int cmd_cd(char **command){
         }
     }
     else{
-        if(strcmp(command[1],"-")==0){
+        char **partition = commande->list;
+        if(strcmp(partition[1],"-")==0){
             if(previous_directory==NULL){
                 write(1,"Il n'y a pas de repertoire de travail précédent\n",50);
                 return 1;
@@ -390,7 +398,7 @@ int cmd_cd(char **command){
                 
             }
         }else{
-            path = command[1];
+            path = partition[1];
         }
     }
     if(chdir(path)!=0){
@@ -402,7 +410,7 @@ int cmd_cd(char **command){
     }
 }
 
-int cmd_for(int argc, char **argv){
+int cmd_for(command *commande){
     int result = 0;
     char *errorMessage = "usage: for [variable-name] in REP [-A] [-r] [-e EXT] [-t TYPE] [-p MAX] { CMD }\n";
     char buf[1024];
@@ -417,6 +425,9 @@ int cmd_for(int argc, char **argv){
     int max_parralel = -1;
 
     struct dirent *entry = NULL;
+
+    int argc = commande->size;
+    char **argv = commande->list;
 
     if(argc < 7 || isIllegalName(argv[3])){
         write(2, errorMessage, strlen(errorMessage));
@@ -539,29 +550,30 @@ int cmd_for(int argc, char **argv){
                 free(remove_extension);
             }
             int bufsize = argc - (firstind) - 2;
-            char **command = split_argv_for(bufsize, argv + firstind + 1, argc - firstind, newref, varname);
+            command *entry  = split_argv_for(bufsize, argv + firstind + 1, argc - firstind, newref, varname);
             if(type == '\0' || isSameType(st.st_mode, type)){
-                applyCommand(command, &temp);
+                applyCommand(entry, &temp);
                 if(temp > result) result = temp;
             }
             if(isSameType(st.st_mode, 'd') && r_option){
-                char **newpart = copyPartition(argv);
-                free(newpart[3]);
+                command *newpart = copyPartition(commande);
+                char **newPartList = newpart->list;
+                free(newPartList[3]);
 
-                if((newpart[3] = malloc(strlen(newref) + 1)) == NULL){
+                if((newPartList[3] = malloc(strlen(newref) + 1)) == NULL){
                     perror("Erreur lors de l'allocation mémoire");
-                    free_double_buffer(newpart, argc);
+                    freeCommand(newpart);
                     result = 1;
                     goto cleanup_return;
                 }
 
-                strcpy(newpart[3], newref);
-                temp = cmd_for(argc, newpart);
+                strcpy(newPartList[3], newref);
+                temp = cmd_for(newpart);
 
                 if(temp > result) result = temp;
-                free_double_buffer(newpart, partSize(newpart));
+                freeCommand(newpart);
             }
-            free_double_buffer(command, partSize(command));
+            freeCommand(entry);
         }
         free(newref);
         free(ref_extension);

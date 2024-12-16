@@ -33,7 +33,7 @@ command *newCommand(char *fullcommand){
 
     newCommand->list = newlist;
     int size = partSize(newlist);
-    if (size < 0) { // Gérer le cas où partSize échoue (si applicable)
+    if (size <= 0) { // Gérer le cas où partSize échoue (si applicable)
         free(newlist);
         free(newCommand);
         write(2, "Erreur lors du calcul de la taille de la commande\n", 50);
@@ -42,6 +42,25 @@ command *newCommand(char *fullcommand){
     return newCommand;
 }
 
+command *newCommandList(char **fullcommands){
+    command *newCommand = malloc(sizeof(command));
+    if (!newCommand) {
+    write(2, "Erreur de d'allocation d'une structure commande\n", 49);
+    return NULL;
+    }
+
+
+    newCommand->list = fullcommands;
+    int size = partSize(fullcommands);
+       if (size <= 0) { // Gérer le cas où partSize échoue (si applicable)
+        free(fullcommands);
+        free(newCommand);
+        write(2, "Erreur lors du calcul de la taille de la commande\n", 50);
+        return NULL;
+    }
+
+    return newCommand;
+}
 
 /**
  * Fonction permettant de libérer la mémoire d'une struct command

@@ -44,6 +44,12 @@ typedef struct linkedList {
  **/
 command *newCommand(char *fullcommand);
 
+/**
+ * Fonction permettant de créer une structure `command`
+ * @param fullcommand liste de chaîne de caractères représentant la commande (partition)
+ * @return Un pointeur vers une structure `command` ou NULL en cas d'erreur d'allocation mémoire
+ **/
+command *newCommandList(char **fullcommands);
 
 /**
  * Fonction permettant de libérer la mémoire d'une structure `command`

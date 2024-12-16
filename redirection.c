@@ -13,21 +13,10 @@
 #include <sys/wait.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include "commandList.h"
+#include "redirection.h"
 
-typedef enum {
-    RSTDIN,
-    RSTDOUT,
-    RSTDOUT_WITH_CRUSHING,
-    RSTDOUT_WITH_APPEND,
-    RSTDERR,
-    RSTDERR_WITH_CRUSHING,
-    RSTDERR_WITH_APPEND
-} Redtype;
 
-typedef struct {
-    Redtype type;
-    char *filename;
-} Redirection;
 
 int is_stdout(char *entry){
     return strcmp(entry, ">") == 0
@@ -45,23 +34,24 @@ int is_stdin(char *entry){
     return strcmp(entry, "<") == 0;
 }
 
-int count_stdin(char **command){
-    int size = partSize(command);
+int count_stdin(command *commande){
+    int size = commande->size;
     int count = 0;
+    char **partition = commande->list;
 
     int hasSemi = 0;
     int hasBrace = 0;
     int hasQuote = 0;
 
     for(int i = 1; i < size; i++){
-        if(strcmp(command[i], "{") == 0) hasBrace = 1;
-        else if(strcmp(command[i], "}") == 0) hasBrace = 0;
-        else if(strstr(command[i], "\"") != NULL){
+        if(strcmp(partition[i], "{") == 0) hasBrace = 1;
+        else if(strcmp(partition[i], "}") == 0) hasBrace = 0;
+        else if(strstr(partition[i], "\"") != NULL){
             if(hasQuote == 0) hasQuote = 1;
             else hasQuote = 0;
         }
-        else if (is_stdin(command[i]) && hasBrace == 0 && hasQuote == 0) {
-            if(i+1 < size && !isIllegalName(command[i+1])) count++;
+        else if (is_stdin(partition[i]) && hasBrace == 0 && hasQuote == 0) {
+            if(i+1 < size && !isIllegalName(partition[i+1])) count++;
             else return -1;
         }
     }
@@ -69,23 +59,24 @@ int count_stdin(char **command){
     return count;
 }
 
-int count_stdout(char **command){
-    int size = partSize(command);
+int count_stdout(command *commande){
+    int size = commande->size;
     int count = 0;
+    char **partition = commande->list;
 
     int hasSemi = 0;
     int hasBrace = 0;
     int hasQuote = 0;
 
     for(int i = 1; i < size; i++){
-        if(strcmp(command[i], "{") == 0) hasBrace = 1;
-        else if(strcmp(command[i], "}") == 0) hasBrace = 0;
-        else if(strstr(command[i], "\"") != NULL){
+        if(strcmp(partition[i], "{") == 0) hasBrace = 1;
+        else if(strcmp(partition[i], "}") == 0) hasBrace = 0;
+        else if(strstr(partition[i], "\"") != NULL){
             if(hasQuote == 0) hasQuote = 1;
             else hasQuote = 0;
         }
-        else if (is_stdout(command[i]) && hasBrace == 0 && hasQuote == 0){
-            if(i+1 < size && !isIllegalName(command[i+1])) count++;
+        else if (is_stdout(partition[i]) && hasBrace == 0 && hasQuote == 0){
+            if(i+1 < size && !isIllegalName(partition[i+1])) count++;
             else return -1;
         }
     }
@@ -93,23 +84,24 @@ int count_stdout(char **command){
     return count;
 }
 
-int count_stderr(char **command){
-    int size = partSize(command);
+int count_stderr(command *commande){
+    int size = commande->size;
     int count = 0;
+    char **partition = commande->list;
 
     int hasSemi = 0;
     int hasBrace = 0;
     int hasQuote = 0;
 
     for(int i = 1; i < size; i++){
-        if(strcmp(command[i], "{") == 0) hasBrace = 1;
-        else if(strcmp(command[i], "}") == 0) hasBrace = 0;
-        else if(strstr(command[i], "\"") != NULL){
+        if(strcmp(partition[i], "{") == 0) hasBrace = 1;
+        else if(strcmp(partition[i], "}") == 0) hasBrace = 0;
+        else if(strstr(partition[i], "\"") != NULL){
             if(hasQuote == 0) hasQuote = 1;
             else hasQuote = 0;
         }
-        else if (is_stderr(command[i]) && hasBrace == 0 && hasQuote == 0){
-            if(i+1 < size && !isIllegalName(command[i+1])) count++;
+        else if (is_stderr(partition[i]) && hasBrace == 0 && hasQuote == 0){
+            if(i+1 < size && !isIllegalName(partition[i+1])) count++;
             else return -1;
         }
     }
@@ -196,8 +188,8 @@ void free_redirection_list(Redirection **redirections, int size){
     free(redirections);
 }
 
-Redirection **get_all_stdin(char **command, int *listSize){
-    int count = count_stdin(command);
+Redirection **get_all_stdin(command *commande, int *listSize){
+    int count = count_stdin(commande);
     if(count <= 0){
         *listSize = count;
         return NULL;
@@ -210,29 +202,31 @@ Redirection **get_all_stdin(char **command, int *listSize){
         return NULL;
     }
 
-    int size = partSize(command);
+    int size = commande->size;
 
     int hasSemi = 0;
     int hasBrace = 0;
     int hasQuote = 0;
 
+    char **partition = commande->list;
+
     int pos = 0;
 
     for(int i = 1; i < size; i++){
-        if(strcmp(command[i], "{") == 0) hasBrace = 1;
-        else if(strcmp(command[i], "}") == 0) hasBrace = 0;
-        else if(strstr(command[i], "\"") != NULL){
+        if(strcmp(partition[i], "{") == 0) hasBrace = 1;
+        else if(strcmp(partition[i], "}") == 0) hasBrace = 0;
+        else if(strstr(partition[i], "\"") != NULL){
             if(hasQuote == 0) hasQuote = 1;
             else hasQuote = 0;
         }
-        else if (is_stdin(command[i]) && hasBrace == 0 && hasQuote == 0){
+        else if (is_stdin(partition[i]) && hasBrace == 0 && hasQuote == 0){
             if(i+1 >= size){
                 char *s = "Mauvais usage de la redirection\n";
                 write(2, s, strlen(s));
                 free_redirection_list(res, pos);
                 return NULL;
             }
-            res[pos] = make_redirection(command[i], command[i+1]);
+            res[pos] = make_redirection(partition[i], partition[i+1]);
             pos++;
         }
     }
@@ -241,8 +235,8 @@ Redirection **get_all_stdin(char **command, int *listSize){
     return res;
 }
 
-Redirection **get_all_stdout(char **command, int *listSize){
-    int count = count_stdout(command);
+Redirection **get_all_stdout(command *commande, int *listSize){
+    int count = count_stdout(commande);
     if(count <= 0){
         *listSize = count;
         return NULL;
@@ -255,7 +249,9 @@ Redirection **get_all_stdout(char **command, int *listSize){
         return NULL;
     }
 
-    int size = partSize(command);
+    int size = commande->size;
+
+    char **partition = commande->list;
 
     int hasSemi = 0;
     int hasBrace = 0;
@@ -264,20 +260,20 @@ Redirection **get_all_stdout(char **command, int *listSize){
     int pos = 0;
 
     for(int i = 1; i < size; i++){
-        if(strcmp(command[i], "{") == 0) hasBrace = 1;
-        else if(strcmp(command[i], "}") == 0) hasBrace = 0;
-        else if(strstr(command[i], "\"") != NULL){
+        if(strcmp(partition[i], "{") == 0) hasBrace = 1;
+        else if(strcmp(partition[i], "}") == 0) hasBrace = 0;
+        else if(strstr(partition[i], "\"") != NULL){
             if(hasQuote == 0) hasQuote = 1;
             else hasQuote = 0;
         }
-        else if (is_stdout(command[i]) && hasBrace == 0 && hasQuote == 0){
+        else if (is_stdout(partition[i]) && hasBrace == 0 && hasQuote == 0){
             if(i+1 >= size){
                 char *s = "Mauvais usage de la redirection\n";
                 write(2, s, strlen(s));
                 free_redirection_list(res, pos);
                 return NULL;
             }
-            res[pos] = make_redirection(command[i], command[i+1]);
+            res[pos] = make_redirection(partition[i], partition[i+1]);
             pos++;
         }
     }
@@ -286,8 +282,8 @@ Redirection **get_all_stdout(char **command, int *listSize){
     return res;
 }
 
-Redirection **get_all_stderr(char **command, int *listSize){
-    int count = count_stderr(command);
+Redirection **get_all_stderr(command *commande, int *listSize){
+    int count = count_stderr(commande);
     if(count <= 0){
         *listSize = count;
         return NULL;
@@ -300,7 +296,9 @@ Redirection **get_all_stderr(char **command, int *listSize){
         return NULL;
     }
 
-    int size = partSize(command);
+    int size = commande->size;
+
+    char **partition = commande->list;
 
     int hasSemi = 0;
     int hasBrace = 0;
@@ -309,20 +307,20 @@ Redirection **get_all_stderr(char **command, int *listSize){
     int pos = 0;
 
     for(int i = 1; i < size; i++){
-        if(strcmp(command[i], "{") == 0) hasBrace = 1;
-        else if(strcmp(command[i], "}") == 0) hasBrace = 0;
-        else if(strstr(command[i], "\"") != NULL){
+        if(strcmp(partition[i], "{") == 0) hasBrace = 1;
+        else if(strcmp(partition[i], "}") == 0) hasBrace = 0;
+        else if(strstr(partition[i], "\"") != NULL){
             if(hasQuote == 0) hasQuote = 1;
             else hasQuote = 0;
         }
-        else if (is_stderr(command[i]) && hasBrace == 0 && hasQuote == 0){
+        else if (is_stderr(partition[i]) && hasBrace == 0 && hasQuote == 0){
             if(i+1 >= size){
                 char *s = "Mauvais usage de la redirection\n";
                 write(2, s, strlen(s));
                 free_redirection_list(res, pos);
                 return NULL;
             }
-            res[pos] = make_redirection(command[i], command[i+1]);
+            res[pos] = make_redirection(partition[i], partition[i+1]);
             pos++;
         }
     }
@@ -331,17 +329,19 @@ Redirection **get_all_stderr(char **command, int *listSize){
     return res;
 }
 
-char **remove_all_redirection(char **command){
-    if (command == NULL || command[0] == NULL) return NULL;
-    int count_red = count_stdin(command) + count_stdout(command) + count_stderr(command);
-    if(count_red == 0) return copyPartition(command);
+command *remove_all_redirection(command *commande){
+    if (commande == NULL || commande ->list == NULL) return NULL;
+    int count_red = count_stdin(commande) + count_stdout(commande) + count_stderr(commande);
+    if(count_red == 0) return copyPartition(commande);
 
-    int size = partSize(command);
+    int size = commande->size;
     int newSize = size - count_red * 2;
     int pos = 0;
 
-    char **res = malloc((newSize+1) * sizeof(char *));
-    if(res == NULL){
+    char **partition = commande->list;
+
+    char **newPart = malloc((newSize+1) * sizeof(char *));
+    if(newPart == NULL){
         char *s = "Erreur lors de l'allocation mémoire\n";
         write(2, s, strlen(s));
         return NULL;
@@ -349,21 +349,23 @@ char **remove_all_redirection(char **command){
 
     int i = 0;
     while(i < size){
-        if(is_stdin(command[i]) || is_stdout(command[i]) || is_stderr(command[i])) i+= 2;
+        if(is_stdin(partition[i]) || is_stdout(partition[i]) || is_stderr(partition[i])) i+= 2;
         else{
-            if((res[pos] = malloc(strlen(command[i]) + 1)) == NULL){
+            if((newPart[pos] = malloc(strlen(partition[i]) + 1)) == NULL){
                 char *s = "Erreur lors de l'allocation mémoire\n";
                 write(2, s, strlen(s));
-                free_double_buffer(res, pos);
+                free_double_buffer(newPart, pos);
                 return NULL;
             }
-            strcpy(res[pos], command[i]);
+            strcpy(newPart[pos], partition[i]);
             pos++;
             i++;
         }
     }
 
-    res[newSize] = (char *) NULL;
+    newPart[newSize] = (char *) NULL;
+
+    command *res = newCommandList(newPart);
 
     return res;
 }
