@@ -20,9 +20,11 @@ int commande_externe(char **command);
 int forCommand(char **command);
 int cmd_for(int argc, char **argv);
 
+int ifCommand(char **command);
+int cmd_if(int argc, char **argv);
+
 int exitCommand(char **command, int *error);
 int cmd_exit(char **command, int *error);
-
 
 int ftypeCommand(char **command);
 int cmd_ftype(char **command);
@@ -137,6 +139,7 @@ void applyCommand(char **command, int *error){
         else if(strcmp(command_without_red[0], "exit") == 0) *error = exitCommand(command_without_red, error);
         else if(strcmp(command_without_red[0], "ftype") == 0) *error = ftypeCommand(command_without_red);
         else if(strcmp(command_without_red[0], "for") == 0) *error =  forCommand(command_without_red);
+        else if(strcmp(command_without_red[0], "if") == 0) *error =  ifCommand(command_without_red);
         else if(strcmp(command[0], "cd") == 0) *error = cdCommand(command_without_red);
         else *error = commande_externe(command_without_red);
 
@@ -169,6 +172,24 @@ int forCommand(char **command){
     pid_t pid = 0;
     if((pid = fork()) == 0){
         exit(cmd_for(partSize(command), command));
+    }
+    else{
+        int status;
+        waitpid(pid, &status, 0);
+        if(WIFEXITED(status)) return WEXITSTATUS(status);
+        if(WIFSIGNALED(status)) return -WTERMSIG(status);
+        return 1;
+    }
+}
+
+/**
+ * Fonction permettant d'appliquer la commande if ( if TEST { CMD_1 } ou f TEST { CMD_1 } else { CMD_2 }).
+ * @return Un entier supérieure à 1 si une erreur s'est produite pendant le processus et 0 si tout s'est bien passé.
+ */
+int ifCommand(char **command){
+    pid_t pid = 0;
+    if((pid = fork()) == 0){
+        exit(cmd_if(partSize(command), command));
     }
     else{
         int status;
@@ -262,7 +283,7 @@ int commande_externe(char **command){
 }
 
 
-int cmd_exit(char  **command, int *error) {
+int cmd_exit(char **command, int *error) {
     char *errorMessage = "usage: exit [VAL]\n";
     int size = partSize(command);
 
@@ -335,7 +356,6 @@ int cmd_ftype(char **command) {
 }
 
 int cmd_pwd(char **command) {
-
     char cwd[1024];
 
     if(partSize(command) != 1){
@@ -400,6 +420,62 @@ int cmd_cd(char **command){
         update_directories(path);
         return 0;
     }
+}
+
+int cmd_if(int argc, char **argv){
+    int result = 0;
+    char *errorMessage = "usage: if [ TEST ] { CMD } or if [ TEST ] { CMD_1 } else { CMD_2 }\n";
+
+    if(argc < 7){
+        write(2, errorMessage, strlen(errorMessage));
+        result = 2;
+        return result;
+    }
+
+    int closing_bracket_pos;
+    for (int i = 2; i < argc; i++) { // On cherche la position de `]`
+        if (strcmp("]", argv[i]) == 0) {
+            closing_bracket_pos = i;
+            break;
+        }
+    }
+
+    if(strcmp("[", argv[1]) != 0 || strcmp("}", argv[argc-1]) != 0 || strcmp("{", argv[closing_bracket_pos + 1]) != 0 || isBraceGood(argv) == 0 || isBraceGood2(argv) == 0){
+        write(2, errorMessage, strlen(errorMessage));
+        result = 2;
+        return result;
+    }
+
+    int else_pos = hasElse(argv);
+    if(else_pos > 0){
+        if(strcmp("}", argv[else_pos - 1]) != 0 || strcmp("{", argv[else_pos + 1]) != 0 ){
+            write(2, errorMessage, strlen(errorMessage));
+            result = 2;
+            return result;
+        }
+    }
+
+    int test_result;
+    char **cmd_test = makeSubPartition(argv,2,closing_bracket_pos - 1);
+    char **cmd_1 = makeSubPartition(argv,closing_bracket_pos + 2, else_pos - 2);
+    char **cmd_2 = NULL;
+    
+    applyCommand(cmd_test, &test_result);
+
+    if(else_pos != -1){
+        if(test_result == 0){
+            applyCommand(cmd_1, &result);
+        }else{
+            cmd_2 = makeSubPartition(argv,else_pos + 2, argc - 2);;
+            applyCommand(cmd_2, &result);
+        }
+    }else{
+        if(test_result == 0){
+            applyCommand(cmd_1, &result);
+        }   
+    }
+
+    return result;
 }
 
 int cmd_for(int argc, char **argv){

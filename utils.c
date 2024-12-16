@@ -298,6 +298,21 @@ int isBraceGood(char **partition){
     return braceOpen == 0;
 }
 
+int isBraceGood2(char **partition){
+    int size = partSize(partition);
+    int braceOpen = 0;
+
+    for(int i = 0; i < size; i++){
+        if(strcmp(partition[i], "[") == 0) braceOpen++;
+        else if(strcmp(partition[i], "]") == 0){
+            if(braceOpen == 0) return 0;
+            braceOpen--;
+        }
+    }
+
+    return braceOpen == 0;
+}
+
 int isIllegalName(char *argv){
     return strcmp(argv, "{") == 0 || strcmp(argv, "}") == 0 || strcmp(argv, "<") == 0 || strcmp(argv, ">") == 0 || strcmp(argv, "|") == 0 || strcmp(argv, ";") == 0 || strcmp(argv, "$") == 0;
 }
@@ -488,7 +503,6 @@ int isSameType(mode_t mode, char f){
 /**
  * Fonction permettant de copier une partition de chaîne de caractère.
  */
-
 char **copyPartition(char **partition){
     int size = partSize(partition);
     char **buf;
@@ -511,4 +525,16 @@ char **copyPartition(char **partition){
     buf[size] = (char *) NULL;
 
     return buf;
+}
+
+int hasElse(char **command) {
+    int i = 0;
+    while (command[i] != NULL) {
+        if (strcmp(command[i], "else") == 0) {
+            return i;
+        }
+        i++;
+    }
+
+    return -1;
 }
