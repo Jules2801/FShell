@@ -181,9 +181,8 @@ void freeAllNodes(node *noeud) {
     
     freeCommand(noeud->data);
 
-    if (noeud->next) freeNode(noeud->next);
+    if (noeud->next) freeAllNodes(noeud->next);
     
-
     free(noeud);
 }
 
@@ -196,5 +195,6 @@ void freeLinkedList(linkedList *list){
         return;
     }
     freeAllNodes(list->head);
+    free(list);
  
 }
