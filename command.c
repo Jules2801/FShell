@@ -88,6 +88,13 @@ void applyCommand(char **command, int *error){
         Redirection **outList = get_all_stdout(command, &countOut);
         Redirection **errList = get_all_stderr(command, &countErr);
 
+        if(countIn + countOut + countErr < 0){
+            char *s = "Mauvaise utilisation des redirections\n";
+            write(2,s,strlen(s));
+            *error = 2;
+            return;
+        }
+
         char **command_without_red = remove_all_redirection(command);
 
         if(countIn != 0){
@@ -139,12 +146,15 @@ void applyCommand(char **command, int *error){
         free_redirection_list(errList, countErr);
 
         dup2(oldIn, STDIN_FILENO);
+        close(oldIn),
         isInRed = 0;
 
         dup2(oldOut, STDOUT_FILENO);
+        close(oldOut);
         isOutRed = 0;
 
         dup2(oldErr, STDERR_FILENO);
+        close(oldErr);
         isErrRed = 0;
     }
 }
@@ -406,13 +416,11 @@ int cmd_for(int argc, char **argv){
     char type = '\0';
     int max_parralel = -1;
 
-    char *s = "Erreur : option inconnue ou argument manquant\n";
-
     struct dirent *entry = NULL;
 
-    if(argc < 7 || strcmp("in", argv[2])){
+    if(argc < 7 || isIllegalName(argv[3])){
         write(2, errorMessage, strlen(errorMessage));
-        return 1;
+        return 2;
     }
 
     if(getcwd(buf, 1024) == NULL){
@@ -483,31 +491,31 @@ int cmd_for(int argc, char **argv){
                 break;
             
             case 'p' :
-                // TODO : Créer une fonction permettant de vérifier qu'on entre bien un entier
                 if((max_parralel = stringToPositiveInteger(optarg)) == -1){
                     write(2, errorMessage, strlen(errorMessage));
-                    result = 1;
+                    result = 2;
                     goto cleanup_return;
                 };
 
                 break;
 
             case '?' :
-                write(2, s, strlen(s));
-                result = 1;
+                write(2, errorMessage, strlen(errorMessage));
+                result = 2;
                 goto cleanup_return;
         }   
     }
     int firstind = optind + 3;
-    if(strcmp("{", argv[firstind]) != 0 || strcmp("}", argv[argc-1]) != 0){
+    if(strcmp("{", argv[firstind]) != 0 || strcmp("}", argv[argc-1]) != 0 || isBraceGood(argv) == 0){
         write(2, errorMessage, strlen(errorMessage));
-        result = 1;
+        result = 2;
         goto cleanup_return;
     }
 
     struct stat st;
     while((entry = readdir(dir)) != NULL){
         char *newref = getRelativeReference(argv[3], entry->d_name);
+        char *ref_extension = extract_extension(entry->d_name);
         if(lstat(newref, &st) == -1){
             result = 1;
             goto cleanup_return;
@@ -515,13 +523,27 @@ int cmd_for(int argc, char **argv){
         if(strcmp(entry->d_name, ".") == 0 
         || strcmp(entry->d_name, "..") == 0 
         || (a_option == 0 && entry->d_name[0] == '.') 
-        || (extension != NULL && strcmp(extension, extract_extension(entry->d_name)))
-        || (type != '\0' && !isSameType(st.st_mode, type))
-        ) continue;
+        || (extension != NULL && !(ref_extension != NULL && strcmp(extension, ref_extension) == 0))
+        || (type != '\0' && !isSameType(st.st_mode, type) && r_option == 0)
+        ){
+            free(newref);
+            free(ref_extension);
+            continue;
+        }
         else{
+            int temp;
+            if(extension != NULL){
+                free(newref);
+                char *remove_extension = remove_extension_from_file(entry->d_name);
+                newref = getRelativeReference(argv[3], remove_extension);
+                free(remove_extension);
+            }
             int bufsize = argc - (firstind) - 2;
             char **command = split_argv_for(bufsize, argv + firstind + 1, argc - firstind, newref, varname);
-            applyCommand(command, &result);
+            if(type == '\0' || isSameType(st.st_mode, type)){
+                applyCommand(command, &temp);
+                if(temp > result) result = temp;
+            }
             if(isSameType(st.st_mode, 'd') && r_option){
                 char **newpart = copyPartition(argv);
                 free(newpart[3]);
@@ -534,11 +556,15 @@ int cmd_for(int argc, char **argv){
                 }
 
                 strcpy(newpart[3], newref);
+                temp = cmd_for(argc, newpart);
 
-                result = cmd_for(argc, newpart);
+                if(temp > result) result = temp;
+                free_double_buffer(newpart, partSize(newpart));
             }
+            free_double_buffer(command, partSize(command));
         }
         free(newref);
+        free(ref_extension);
     }
 
     goto cleanup_return;

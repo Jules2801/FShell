@@ -60,7 +60,10 @@ int count_stdin(char **command){
             if(hasQuote == 0) hasQuote = 1;
             else hasQuote = 0;
         }
-        else if (is_stdin(command[i]) && hasBrace == 0 && hasQuote == 0) count++;
+        else if (is_stdin(command[i]) && hasBrace == 0 && hasQuote == 0) {
+            if(i+1 < size && !isIllegalName(command[i+1])) count++;
+            else return -1;
+        }
     }
 
     return count;
@@ -81,7 +84,10 @@ int count_stdout(char **command){
             if(hasQuote == 0) hasQuote = 1;
             else hasQuote = 0;
         }
-        else if (is_stdout(command[i]) && hasBrace == 0 && hasQuote == 0) count++;
+        else if (is_stdout(command[i]) && hasBrace == 0 && hasQuote == 0){
+            if(i+1 < size && !isIllegalName(command[i+1])) count++;
+            else return -1;
+        }
     }
 
     return count;
@@ -102,7 +108,10 @@ int count_stderr(char **command){
             if(hasQuote == 0) hasQuote = 1;
             else hasQuote = 0;
         }
-        else if (is_stderr(command[i]) && hasBrace == 0 && hasQuote == 0) count++;
+        else if (is_stderr(command[i]) && hasBrace == 0 && hasQuote == 0){
+            if(i+1 < size && !isIllegalName(command[i+1])) count++;
+            else return -1;
+        }
     }
 
     return count;
@@ -189,13 +198,16 @@ void free_redirection_list(Redirection **redirections, int size){
 
 Redirection **get_all_stdin(char **command, int *listSize){
     int count = count_stdin(command);
-    if(count_stdin(command) == 0) return NULL;
+    if(count <= 0){
+        *listSize = count;
+        return NULL;
+    }
 
     Redirection **res;
     if((res = malloc(count * sizeof(Redirection *))) == NULL){
         char *s = "Erreur lors de l'allocation mémoire\n";
         write(2, s, strlen(s));
-        exit(0);
+        return NULL;
     }
 
     int size = partSize(command);
@@ -218,7 +230,7 @@ Redirection **get_all_stdin(char **command, int *listSize){
                 char *s = "Mauvais usage de la redirection\n";
                 write(2, s, strlen(s));
                 free_redirection_list(res, pos);
-                exit(1);
+                return NULL;
             }
             res[pos] = make_redirection(command[i], command[i+1]);
             pos++;
@@ -230,14 +242,17 @@ Redirection **get_all_stdin(char **command, int *listSize){
 }
 
 Redirection **get_all_stdout(char **command, int *listSize){
-    int count = count_stdin(command);
-    if(count_stdout(command) == 0) return NULL;
+    int count = count_stdout(command);
+    if(count <= 0){
+        *listSize = count;
+        return NULL;
+    }
 
     Redirection **res;
     if((res = malloc(count * sizeof(Redirection *))) == NULL){
         char *s = "Erreur lors de l'allocation mémoire\n";
         write(2, s, strlen(s));
-        exit(0);
+        return NULL;
     }
 
     int size = partSize(command);
@@ -260,7 +275,7 @@ Redirection **get_all_stdout(char **command, int *listSize){
                 char *s = "Mauvais usage de la redirection\n";
                 write(2, s, strlen(s));
                 free_redirection_list(res, pos);
-                exit(1);
+                return NULL;
             }
             res[pos] = make_redirection(command[i], command[i+1]);
             pos++;
@@ -272,14 +287,17 @@ Redirection **get_all_stdout(char **command, int *listSize){
 }
 
 Redirection **get_all_stderr(char **command, int *listSize){
-    int count = count_stdin(command);
-    if(count_stderr(command) == 0) return NULL;
+    int count = count_stderr(command);
+    if(count <= 0){
+        *listSize = count;
+        return NULL;
+    }
 
     Redirection **res;
     if((res = malloc(count * sizeof(Redirection *))) == NULL){
         char *s = "Erreur lors de l'allocation mémoire\n";
         write(2, s, strlen(s));
-        exit(0);
+        return NULL;
     }
 
     int size = partSize(command);
@@ -302,7 +320,7 @@ Redirection **get_all_stderr(char **command, int *listSize){
                 char *s = "Mauvais usage de la redirection\n";
                 write(2, s, strlen(s));
                 free_redirection_list(res, pos);
-                exit(1);
+                return NULL;
             }
             res[pos] = make_redirection(command[i], command[i+1]);
             pos++;
@@ -326,7 +344,7 @@ char **remove_all_redirection(char **command){
     if(res == NULL){
         char *s = "Erreur lors de l'allocation mémoire\n";
         write(2, s, strlen(s));
-        exit(1);
+        return NULL;
     }
 
     int i = 0;
@@ -337,7 +355,7 @@ char **remove_all_redirection(char **command){
                 char *s = "Erreur lors de l'allocation mémoire\n";
                 write(2, s, strlen(s));
                 free_double_buffer(res, pos);
-                exit(1);
+                return NULL;
             }
             strcpy(res[pos], command[i]);
             pos++;
