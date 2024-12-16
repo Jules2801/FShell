@@ -457,20 +457,22 @@ int cmd_if(int argc, char **argv){
 
     int test_result;
     char **cmd_test = makeSubPartition(argv,2,closing_bracket_pos - 1);
-    char **cmd_1 = makeSubPartition(argv,closing_bracket_pos + 2, else_pos - 2);
+    char **cmd_1 = NULL;
     char **cmd_2 = NULL;
     
     applyCommand(cmd_test, &test_result);
 
     if(else_pos != -1){
         if(test_result == 0){
+            cmd_1 = makeSubPartition(argv,closing_bracket_pos + 2, else_pos - 2);
             applyCommand(cmd_1, &result);
         }else{
-            cmd_2 = makeSubPartition(argv,else_pos + 2, argc - 2);;
+            cmd_2 = makeSubPartition(argv,else_pos + 2, argc - 2);
             applyCommand(cmd_2, &result);
         }
     }else{
         if(test_result == 0){
+            cmd_1 = makeSubPartition(argv,closing_bracket_pos + 2, argc - 2);
             applyCommand(cmd_1, &result);
         }   
     }
