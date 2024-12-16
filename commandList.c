@@ -2,11 +2,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <sys/_types/_null.h>
 #include <unistd.h>
 #include <stdbool.h>
 #include <ctype.h>
-#include <dirent.h>
 #include "utils.h"
 #include "commandList.h"
 
