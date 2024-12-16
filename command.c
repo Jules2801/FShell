@@ -453,7 +453,7 @@ int cmd_for(int argc, char **argv){
     }
 
     int opt;
-    optind = 1;
+    optind = 0;
     while((opt = getopt(argc, argv+3, "+:Are:t:p:")) != -1){
         switch(opt){
             case 'A':
