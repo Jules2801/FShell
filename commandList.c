@@ -37,6 +37,10 @@ command *newCommand(char *fullcommand){
         write(2, "Erreur lors du calcul de la taille de la commande\n", 50);
         return NULL;
     }
+
+    newCommand->size = size;
+
+
     return newCommand;
 }
 
