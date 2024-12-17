@@ -166,4 +166,11 @@ int isSameType(mode_t mode, char f);
  */
 command *copyPartition(command *commande);
 
-#endif 
+char *remove_extension_from_file(const char *arg);
+int isBraceGood(char **partition);
+int isBraceGood2(char **partition);
+int isIllegalName(char *argv);
+int hasElse(char **command);
+command *makeSubPartition(command *commande, int first, int last);
+int applyTest(char **cmd_test);
+#endif

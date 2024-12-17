@@ -24,7 +24,6 @@ int cmd_for(command *command);
 int exitCommand(command *command, int *error);
 int cmd_exit(command *command, int *error);
 
-
 int ftypeCommand(command *command);
 int cmd_ftype(command *command);
 
@@ -34,6 +33,8 @@ int cmd_pwd(command *command);
 int cdCommand(command *command);
 int cmd_cd(command *command);
 
+int ifCommand(command *command);
+int cmd_if(command *commande);
 
 /**
  * Fonction permettant de mettre a jour le repertoire courant et l'ancien
@@ -140,6 +141,7 @@ void applyCommand(command *commande, int *error){
         else if(strcmp(partitionWithoutRed[0], "exit") == 0) *error = exitCommand(command_without_red, error);
         else if(strcmp(partitionWithoutRed[0], "ftype") == 0) *error = ftypeCommand(command_without_red);
         else if(strcmp(partitionWithoutRed[0], "for") == 0) *error =  forCommand(command_without_red);
+        else if(strcmp(partitionWithoutRed[0], "if") == 0) *error = ifCommand(command_without_red);
         else if(strcmp(partitionWithoutRed[0], "cd") == 0) *error = cdCommand(command_without_red);
         else *error = commande_externe(command_without_red);
 
@@ -172,6 +174,25 @@ int forCommand(command *commande){
     pid_t pid = 0;
     if((pid = fork()) == 0){
         exit(cmd_for(commande));
+    }
+    else{
+        int status;
+        waitpid(pid, &status, 0);
+        if(WIFEXITED(status)) return WEXITSTATUS(status);
+        if(WIFSIGNALED(status)) return -WTERMSIG(status);
+        return 1;
+    }
+}
+
+/**
+ * Fonction permettant d'appliquer la commande if ( if TEST { CMD_1 } ou f TEST { CMD_1 } else { CMD_2 }).
+ * @return Un entier supérieure à 1 si une erreur s'est produite pendant le processus et 0 si tout s'est bien passé.
+ */
+int ifCommand(command *commande){
+
+    pid_t pid = 0;
+    if((pid = fork()) == 0){
+        exit(cmd_if(commande));
     }
     else{
         int status;
@@ -395,7 +416,6 @@ int cmd_cd(command *commande){
             }
             else{
                 path = previous_directory;
-                
             }
         }else{
             path = partition[1];
@@ -408,6 +428,85 @@ int cmd_cd(command *commande){
         update_directories(path);
         return 0;
     }
+}
+
+int cmd_if(command *commande){
+    int argc = commande->size;
+    char  **argv = commande->list;
+
+    int result = 0;
+    char *errorMessage = "usage: if [ TEST ] { CMD } or if [ TEST ] { CMD_1 } else { CMD_2 } or if test condition { CMD }...\n";
+
+    if(argc < 7){
+        write(2, errorMessage, strlen(errorMessage));
+        result = 2;
+        goto cleanup_return;
+    }
+
+    if((strcmp("test", argv[1]) != 0) && (strcmp("[", argv[1]) != 0)){
+        write(2, errorMessage, strlen(errorMessage));
+        result = 2;
+        goto cleanup_return; 
+    }
+
+    int first_opening_bracket_pos;
+    for (int i = 2; i < argc; i++) { // On cherche la position de la première `{`
+        if (strcmp("{", argv[i]) == 0) {
+            first_opening_bracket_pos = i;
+            break;
+        }
+    }
+
+    if(strcmp("}", argv[argc-1]) != 0 || strcmp("{", argv[first_opening_bracket_pos]) != 0 || isBraceGood(argv) == 0 || isBraceGood2(argv) == 0){
+        write(2, errorMessage, strlen(errorMessage));
+        result = 2;
+        goto cleanup_return;
+    }
+
+    int else_pos = hasElse(argv);
+    if(else_pos > 0){
+        if(strcmp("}", argv[else_pos - 1]) != 0 || strcmp("{", argv[else_pos + 1]) != 0 ){
+            write(2, errorMessage, strlen(errorMessage));
+            result = 2;
+            goto cleanup_return;
+        }
+    }
+
+    command *cmd_test = NULL;
+    if (strcmp("test", argv[1]) == 0){
+        cmd_test = makeSubPartition(commande,2,first_opening_bracket_pos -1); // si on a if test condition { CMD } ...
+    }else{
+        cmd_test = makeSubPartition(commande,2,first_opening_bracket_pos -2); // si on a if [ TEST ] { CMD } ...
+    }
+    int test_result = applyTest(cmd_test->list);
+    command *cmd_1 = NULL;
+    command *cmd_2 = NULL;
+
+    if(else_pos != -1){
+        if(test_result == 0){
+            cmd_1 = makeSubPartition(commande,first_opening_bracket_pos + 1, else_pos - 2);
+            applyCommand(cmd_1, &result);
+            goto cleanup_return;
+        }else{
+            cmd_2 = makeSubPartition(commande,else_pos + 2, argc - 2);
+            applyCommand(cmd_2, &result);
+            goto cleanup_return;
+        }
+    }else{
+        if(test_result == 0){
+            cmd_1 = makeSubPartition(commande,first_opening_bracket_pos + 1, argc - 2);
+            applyCommand(cmd_1, &result);
+            goto cleanup_return;
+        }   
+    }
+
+    goto cleanup_return;
+
+    cleanup_return :
+        if(cmd_test != NULL) freeCommand(cmd_test); 
+        if(cmd_1 != NULL) freeCommand(cmd_1);
+        if(cmd_2 != NULL) freeCommand(cmd_2);
+    return result;
 }
 
 int cmd_for(command *commande){

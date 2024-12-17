@@ -301,6 +301,21 @@ int isBraceGood(char **partition){
     return braceOpen == 0;
 }
 
+int isBraceGood2(char **partition){
+    int size = partSize(partition);
+    int braceOpen = 0;
+
+    for(int i = 0; i < size; i++){
+        if(strcmp(partition[i], "[") == 0) braceOpen++;
+        else if(strcmp(partition[i], "]") == 0){
+            if(braceOpen == 0) return 0;
+            braceOpen--;
+        }
+    }
+
+    return braceOpen == 0;
+}
+
 int isIllegalName(char *argv){
     return strcmp(argv, "{") == 0 || strcmp(argv, "}") == 0 || strcmp(argv, "<") == 0 || strcmp(argv, ">") == 0 || strcmp(argv, "|") == 0 || strcmp(argv, ";") == 0 || strcmp(argv, "$") == 0;
 }
@@ -414,6 +429,7 @@ command *makeSubPartition(command *commande, int first, int last){
     int subsize = last-first+2;
     if((sub = malloc((subsize) * sizeof(char *))) == NULL){
         perror("Erreur lors de l'allocation mémoire");
+        free_double_buffer(sub, subsize);
         exit(1);
     }
 
@@ -423,6 +439,7 @@ command *makeSubPartition(command *commande, int first, int last){
         int size = strlen(partition[i]) + 1;
         if((sub[pos] = malloc(size + 1)) == NULL){
             perror("Erreur lors de l'allocation mémoire");
+            free_double_buffer(sub, i);
             exit(1);
         }
 
@@ -524,4 +541,94 @@ command *copyPartition(command *commande){
     command *res = newCommandList(buf);
 
     return res;
+}
+
+/**
+ * Fonction qui verifie si il y a un "else" dans une commande structurée if...
+ * @param command une commande
+ * @return la indice/position du "else" ou -1 si il n'y a pas de "else" dans la commande*/
+int hasElse(char **command) {
+    int i = 0;
+    while (command[i] != NULL) {
+        if (strcmp(command[i], "else") == 0) {
+            return i;
+        }
+        i++;
+    }
+
+    return -1;
+}
+
+
+/**
+ * Fonction qui exécute le test correspondant.
+ * @param cmd_test un test/une condition dans une commande structurée if...
+ * @return la valeur de retour du test (echec ou réussite) ou -1 si le test n'est pas reconnu '*/
+int applyTest(char **cmd_test) {
+    if (strcmp(cmd_test[0], "-d") == 0) {
+        DIR *dir = opendir(cmd_test[1]);
+        int r = (access(cmd_test[1], F_OK) == 0 && dir != NULL) ? 0 : 1;
+        closedir(dir);
+        return r;
+    }
+    if (strcmp(cmd_test[0], "-f") == 0) {
+        struct stat file_stat;
+        if (access(cmd_test[1], F_OK) == 0 && stat(cmd_test[1], &file_stat) == 0) {
+            return S_ISREG(file_stat.st_mode) ? 0 : 1;
+        }
+        return 1;
+    }
+    if (strcmp(cmd_test[0], "-e") == 0) {
+        return (access(cmd_test[1], F_OK) == 0) ? 0 : 1;
+    }
+    if (strcmp(cmd_test[0], "-r") == 0) {
+        return (access(cmd_test[1], R_OK) == 0) ? 0 : 1;
+    }
+    if (strcmp(cmd_test[0], "-w") == 0) {
+        return (access(cmd_test[1], W_OK) == 0) ? 0 : 1;
+    }
+    if (strcmp(cmd_test[0], "-x") == 0) {
+        return (access(cmd_test[1], X_OK) == 0) ? 0 : 1;
+    }
+    if (strcmp(cmd_test[0], "-L") == 0) {
+        struct stat file_stat;
+        if (lstat(cmd_test[1], &file_stat) == 0) {
+            return S_ISLNK(file_stat.st_mode) ? 0 : 1;
+        }
+        return 1;
+    }
+    if (strcmp(cmd_test[1], "-eq") == 0) {
+        int a = atoi(cmd_test[0]);
+        int b = atoi(cmd_test[2]);
+        return (a == b) ? 0 : 1;
+    }
+    if (strcmp(cmd_test[1], "=") == 0) {
+        return (strcmp(cmd_test[0], cmd_test[2]) == 0) ? 0 : 1;
+    }
+    if (strcmp(cmd_test[1], "!=") == 0) {
+        return (strcmp(cmd_test[0], cmd_test[2]) != 0) ? 0 : 1;
+    }
+    if (strcmp(cmd_test[0], "-z") == 0) {
+        return (strlen(cmd_test[1]) == 0) ? 0 : 1;
+    }
+    if (strcmp(cmd_test[0], "-n") == 0) {
+        return (strlen(cmd_test[1]) > 0) ? 0 : 1;
+    }
+    if (strcmp(cmd_test[0], "!") == 0) {
+        int sub_test_result = applyTest(&cmd_test[1]);
+        return (sub_test_result == 0) ? 1 : 0;
+    }
+    if (strcmp(cmd_test[1], "-o") == 0) {
+        int sub_test_result1 = applyTest(&cmd_test[0]);
+        int sub_test_result2 = applyTest(&cmd_test[2]);
+        return (sub_test_result1 == 0 || sub_test_result2 == 0) ? 0 : 1;
+    }
+    if (strcmp(cmd_test[1], "-a") == 0) {
+        int sub_test_result1 = applyTest(&cmd_test[0]);
+        int sub_test_result2 = applyTest(&cmd_test[2]);
+        return (sub_test_result1 == 0 && sub_test_result2 == 0) ? 0 : 1;
+    }
+
+    // Test non reconnu
+    return -1;
 }
