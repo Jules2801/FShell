@@ -423,6 +423,7 @@ char **makeSubPartition(char **partition, int first, int last){
     int subsize = last-first+2;
     if((sub = malloc((subsize) * sizeof(char *))) == NULL){
         perror("Erreur lors de l'allocation mémoire");
+        free_double_buffer(sub, subsize);
         exit(1);
     }
 
@@ -432,6 +433,7 @@ char **makeSubPartition(char **partition, int first, int last){
         int size = strlen(partition[i]) + 1;
         if((sub[pos] = malloc(size + 1)) == NULL){
             perror("Erreur lors de l'allocation mémoire");
+            free_double_buffer(sub, i);
             exit(1);
         }
 
@@ -549,10 +551,17 @@ int hasElse(char **command) {
  * @return la valeur de retour du test (echec ou réussite) ou -1 si le test n'est pas reconnu '*/
 int applyTest(char **cmd_test) {
     if (strcmp(cmd_test[0], "-d") == 0) {
-        return (access(cmd_test[1], F_OK) == 0 && opendir(cmd_test[1]) != NULL) ? 0 : 1;
+        DIR *dir = opendir(cmd_test[1]);
+        int r = (access(cmd_test[1], F_OK) == 0 && dir != NULL) ? 0 : 1;
+        closedir(dir);
+        return r;
     }
     if (strcmp(cmd_test[0], "-f") == 0) {
-        return (access(cmd_test[1], F_OK) == 0 && opendir(cmd_test[1]) == NULL) ? 0 : 1;
+        struct stat file_stat;
+        if (access(cmd_test[1], F_OK) == 0 && stat(cmd_test[1], &file_stat) == 0) {
+            return S_ISREG(file_stat.st_mode) ? 0 : 1;
+        }
+        return 1;
     }
     if (strcmp(cmd_test[0], "-e") == 0) {
         return (access(cmd_test[1], F_OK) == 0) ? 0 : 1;

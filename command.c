@@ -428,13 +428,13 @@ int cmd_if(int argc, char **argv){
     if(argc < 7){
         write(2, errorMessage, strlen(errorMessage));
         result = 2;
-        return result;
+        goto cleanup_return;
     }
 
     if((strcmp("test", argv[1]) != 0) && (strcmp("[", argv[1]) != 0)){
         write(2, errorMessage, strlen(errorMessage));
         result = 2;
-        return result;  
+        goto cleanup_return; 
     }
 
     int first_opening_bracket_pos;
@@ -448,7 +448,7 @@ int cmd_if(int argc, char **argv){
     if(strcmp("}", argv[argc-1]) != 0 || strcmp("{", argv[first_opening_bracket_pos]) != 0 || isBraceGood(argv) == 0 || isBraceGood2(argv) == 0){
         write(2, errorMessage, strlen(errorMessage));
         result = 2;
-        return result;
+        goto cleanup_return;
     }
 
     int else_pos = hasElse(argv);
@@ -456,7 +456,7 @@ int cmd_if(int argc, char **argv){
         if(strcmp("}", argv[else_pos - 1]) != 0 || strcmp("{", argv[else_pos + 1]) != 0 ){
             write(2, errorMessage, strlen(errorMessage));
             result = 2;
-            return result;
+            goto cleanup_return;
         }
     }
 
@@ -474,17 +474,26 @@ int cmd_if(int argc, char **argv){
         if(test_result == 0){
             cmd_1 = makeSubPartition(argv,first_opening_bracket_pos + 1, else_pos - 2);
             applyCommand(cmd_1, &result);
+            goto cleanup_return;
         }else{
             cmd_2 = makeSubPartition(argv,else_pos + 2, argc - 2);
             applyCommand(cmd_2, &result);
+            goto cleanup_return;
         }
     }else{
         if(test_result == 0){
             cmd_1 = makeSubPartition(argv,first_opening_bracket_pos + 1, argc - 2);
             applyCommand(cmd_1, &result);
+            goto cleanup_return;
         }   
     }
 
+    goto cleanup_return;
+
+    cleanup_return :
+        if(cmd_test != NULL) free_double_buffer(cmd_test, partSize(cmd_test)); 
+        if(cmd_1 != NULL) free_double_buffer(cmd_1, partSize(cmd_1));
+        if(cmd_2 != NULL) free_double_buffer(cmd_2, partSize(cmd_2));
     return result;
 }
 
