@@ -423,10 +423,7 @@ int cmd_cd(char **command){
 
 int cmd_if(int argc, char **argv){
     int result = 0;
-    char *errorMessage = "usage: if [ TEST ] { CMD } or if [ TEST ] { CMD_1 } else { CMD_2 }\n";
-    char *errorMessage2 = "usage: if [ TEST ] { CMD } or if [ TEST ] { CMD_1 } else { CMD_2 }2\n";
-    char *errorMessage3 = "usage: if [ TEST ] { CMD } or if [ TEST ] { CMD_1 } else { CMD_2 }3\n";
-    char *errorMessage4 = "usage: if [ TEST ] { CMD } or if [ TEST ] { CMD_1 } else { CMD_2 }4\n";
+    char *errorMessage = "usage: if [ TEST ] { CMD } or if [ TEST ] { CMD_1 } else { CMD_2 } or if test condition { CMD }...\n";
 
     if(argc < 7){
         write(2, errorMessage, strlen(errorMessage));
@@ -435,7 +432,7 @@ int cmd_if(int argc, char **argv){
     }
 
     if((strcmp("test", argv[1]) != 0) && (strcmp("[", argv[1]) != 0)){
-        write(2, errorMessage2, strlen(errorMessage2));
+        write(2, errorMessage, strlen(errorMessage));
         result = 2;
         return result;  
     }
@@ -449,7 +446,7 @@ int cmd_if(int argc, char **argv){
     }
 
     if(strcmp("}", argv[argc-1]) != 0 || strcmp("{", argv[first_opening_bracket_pos]) != 0 || isBraceGood(argv) == 0 || isBraceGood2(argv) == 0){
-        write(2, errorMessage3, strlen(errorMessage3));
+        write(2, errorMessage, strlen(errorMessage));
         result = 2;
         return result;
     }
@@ -457,7 +454,7 @@ int cmd_if(int argc, char **argv){
     int else_pos = hasElse(argv);
     if(else_pos > 0){
         if(strcmp("}", argv[else_pos - 1]) != 0 || strcmp("{", argv[else_pos + 1]) != 0 ){
-            write(2, errorMessage4, strlen(errorMessage4));
+            write(2, errorMessage, strlen(errorMessage));
             result = 2;
             return result;
         }
