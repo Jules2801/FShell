@@ -437,16 +437,10 @@ int cmd_if(command *commande){
     int test_result;
     char *errorMessage = "usage: if [ TEST ] { CMD } or if [ TEST ] { CMD_1 } else { CMD_2 } or if test condition { CMD }...\n";
 
-    if(argc < 7){
+    if(argc < 5){
         write(2, errorMessage, strlen(errorMessage));
         result = 2;
         goto cleanup_return;
-    }
-
-    if((strcmp("test", argv[1]) != 0) && (strcmp("[", argv[1]) != 0)){
-        write(2, errorMessage, strlen(errorMessage));
-        result = 2;
-        goto cleanup_return; 
     }
 
     int first_opening_bracket_pos;
