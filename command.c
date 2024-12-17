@@ -407,7 +407,6 @@ int cmd_cd(char **command){
             }
             else{
                 path = previous_directory;
-                
             }
         }else{
             path = command[1];
@@ -425,6 +424,9 @@ int cmd_cd(char **command){
 int cmd_if(int argc, char **argv){
     int result = 0;
     char *errorMessage = "usage: if [ TEST ] { CMD } or if [ TEST ] { CMD_1 } else { CMD_2 }\n";
+    char *errorMessage2 = "usage: if [ TEST ] { CMD } or if [ TEST ] { CMD_1 } else { CMD_2 }2\n";
+    char *errorMessage3 = "usage: if [ TEST ] { CMD } or if [ TEST ] { CMD_1 } else { CMD_2 }3\n";
+    char *errorMessage4 = "usage: if [ TEST ] { CMD } or if [ TEST ] { CMD_1 } else { CMD_2 }4\n";
 
     if(argc < 7){
         write(2, errorMessage, strlen(errorMessage));
@@ -432,16 +434,22 @@ int cmd_if(int argc, char **argv){
         return result;
     }
 
-    int closing_bracket_pos;
-    for (int i = 2; i < argc; i++) { // On cherche la position de `]`
-        if (strcmp("]", argv[i]) == 0) {
-            closing_bracket_pos = i;
+    if((strcmp("test", argv[1]) != 0) && (strcmp("[", argv[1]) != 0)){
+        write(2, errorMessage2, strlen(errorMessage2));
+        result = 2;
+        return result;  
+    }
+
+    int first_opening_bracket_pos;
+    for (int i = 2; i < argc; i++) { // On cherche la position de la première `{`
+        if (strcmp("{", argv[i]) == 0) {
+            first_opening_bracket_pos = i;
             break;
         }
     }
 
-    if(strcmp("[", argv[1]) != 0 || strcmp("}", argv[argc-1]) != 0 || strcmp("{", argv[closing_bracket_pos + 1]) != 0 || isBraceGood(argv) == 0 || isBraceGood2(argv) == 0){
-        write(2, errorMessage, strlen(errorMessage));
+    if(strcmp("}", argv[argc-1]) != 0 || strcmp("{", argv[first_opening_bracket_pos]) != 0 || isBraceGood(argv) == 0 || isBraceGood2(argv) == 0){
+        write(2, errorMessage3, strlen(errorMessage3));
         result = 2;
         return result;
     }
@@ -449,22 +457,25 @@ int cmd_if(int argc, char **argv){
     int else_pos = hasElse(argv);
     if(else_pos > 0){
         if(strcmp("}", argv[else_pos - 1]) != 0 || strcmp("{", argv[else_pos + 1]) != 0 ){
-            write(2, errorMessage, strlen(errorMessage));
+            write(2, errorMessage4, strlen(errorMessage4));
             result = 2;
             return result;
         }
     }
 
-    int test_result;
-    char **cmd_test = makeSubPartition(argv,2,closing_bracket_pos - 1);
+    char **cmd_test = NULL;
+    if (strcmp("test", argv[1]) == 0){
+        cmd_test = makeSubPartition(argv,2,first_opening_bracket_pos -1);
+    }else{
+        cmd_test = makeSubPartition(argv,2,first_opening_bracket_pos -2);
+    }
+    int test_result = applyTest(cmd_test);
     char **cmd_1 = NULL;
     char **cmd_2 = NULL;
-    
-    applyCommand(cmd_test, &test_result);
 
     if(else_pos != -1){
         if(test_result == 0){
-            cmd_1 = makeSubPartition(argv,closing_bracket_pos + 2, else_pos - 2);
+            cmd_1 = makeSubPartition(argv,first_opening_bracket_pos + 1, else_pos - 2);
             applyCommand(cmd_1, &result);
         }else{
             cmd_2 = makeSubPartition(argv,else_pos + 2, argc - 2);
@@ -472,7 +483,7 @@ int cmd_if(int argc, char **argv){
         }
     }else{
         if(test_result == 0){
-            cmd_1 = makeSubPartition(argv,closing_bracket_pos + 2, argc - 2);
+            cmd_1 = makeSubPartition(argv,first_opening_bracket_pos + 1, argc - 2);
             applyCommand(cmd_1, &result);
         }   
     }

@@ -527,6 +527,10 @@ char **copyPartition(char **partition){
     return buf;
 }
 
+/**
+ * Fonction qui verifie si il y a un "else" dans une commande structurée if...
+ * @param command une commande
+ * @return la indice/position du "else" ou -1 si il n'y a pas de "else" dans la commande*/
 int hasElse(char **command) {
     int i = 0;
     while (command[i] != NULL) {
@@ -536,5 +540,71 @@ int hasElse(char **command) {
         i++;
     }
 
+    return -1;
+}
+
+/**
+ * Fonction qui exécute le test correspondant.
+ * @param cmd_test une un test/une condition dans une commande structurée if...
+ * @return la valeur de retour du test (echec ou réussite) ou -1 si le test n'est pas reconnu '*/
+int applyTest(char **cmd_test) {
+    if (strcmp(cmd_test[0], "-d") == 0) {
+        return (access(cmd_test[1], F_OK) == 0 && access(cmd_test[1], R_OK) == 0 && opendir(cmd_test[1]) != NULL) ? 0 : 1;
+    }
+    if (strcmp(cmd_test[0], "-f") == 0) {
+        return (access(cmd_test[1], F_OK) == 0 && access(cmd_test[1], R_OK) == 0) ? 0 : 1;
+    }
+    if (strcmp(cmd_test[0], "-e") == 0) {
+        return (access(cmd_test[1], F_OK) == 0) ? 0 : 1;
+    }
+    if (strcmp(cmd_test[0], "-r") == 0) {
+        return (access(cmd_test[1], R_OK) == 0) ? 0 : 1;
+    }
+    if (strcmp(cmd_test[0], "-w") == 0) {
+        return (access(cmd_test[1], W_OK) == 0) ? 0 : 1;
+    }
+    if (strcmp(cmd_test[0], "-x") == 0) {
+        return (access(cmd_test[1], X_OK) == 0) ? 0 : 1;
+    }
+    if (strcmp(cmd_test[0], "-L") == 0) {
+        struct stat file_stat;
+        if (lstat(cmd_test[1], &file_stat) == 0) {
+            return S_ISLNK(file_stat.st_mode) ? 0 : 1;
+        }
+        return 1;
+    }
+    if (strcmp(cmd_test[1], "-eq") == 0) {
+        int a = atoi(cmd_test[0]);
+        int b = atoi(cmd_test[2]);
+        return (a == b) ? 0 : 1;
+    }
+    if (strcmp(cmd_test[1], "=") == 0) {
+        return (strcmp(cmd_test[0], cmd_test[2]) == 0) ? 0 : 1;
+    }
+    if (strcmp(cmd_test[1], "!=") == 0) {
+        return (strcmp(cmd_test[0], cmd_test[2]) != 0) ? 0 : 1;
+    }
+    if (strcmp(cmd_test[0], "-z") == 0) {
+        return (strlen(cmd_test[1]) == 0) ? 0 : 1;
+    }
+    if (strcmp(cmd_test[0], "-n") == 0) {
+        return (strlen(cmd_test[1]) > 0) ? 0 : 1;
+    }
+    if (strcmp(cmd_test[0], "!") == 0) {
+        int sub_test_result = applyTest(&cmd_test[1]);
+        return (sub_test_result == 0) ? 1 : 0;
+    }
+    if (strcmp(cmd_test[1], "-o") == 0) {
+        int sub_test_result1 = applyTest(&cmd_test[0]);
+        int sub_test_result2 = applyTest(&cmd_test[2]);
+        return (sub_test_result1 == 0 || sub_test_result2 == 0) ? 0 : 1;
+    }
+    if (strcmp(cmd_test[1], "-a") == 0) {
+        int sub_test_result1 = applyTest(&cmd_test[0]);
+        int sub_test_result2 = applyTest(&cmd_test[2]);
+        return (sub_test_result1 == 0 && sub_test_result2 == 0) ? 0 : 1;
+    }
+
+    // Test non reconnu
     return -1;
 }

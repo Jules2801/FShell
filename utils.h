@@ -19,4 +19,5 @@ int isBraceGood2(char **partition);
 int isIllegalName(char *argv);
 int hasElse(char **command);
 char **makeSubPartition(char **partition, int first, int last);
+int applyTest(char **cmd_test);
 #endif
