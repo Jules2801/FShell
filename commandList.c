@@ -61,6 +61,8 @@ command *newCommandList(char **fullcommands){
         return NULL;
     }
 
+    newCommand->size = size;
+
     return newCommand;
 }
 
