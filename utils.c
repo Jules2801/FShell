@@ -559,7 +559,6 @@ int hasElse(char **command) {
     return -1;
 }
 
-
 /**
  * Fonction qui exécute le test correspondant.
  * @param cmd_test un test/une condition dans une commande structurée if...

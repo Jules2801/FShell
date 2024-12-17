@@ -189,6 +189,24 @@ int forCommand(command *commande){
  * @return Un entier supérieure à 1 si une erreur s'est produite pendant le processus et 0 si tout s'est bien passé.
  */
 int ifCommand(command *commande){
+    pid_t pid = 0;
+    if((pid = fork()) == 0){
+        exit(cmd_if(commande));
+    }
+    else{
+        int status;
+        waitpid(pid, &status, 0);
+        if(WIFEXITED(status)) return WEXITSTATUS(status);
+        if(WIFSIGNALED(status)) return -WTERMSIG(status);
+        return 1;
+    }
+}
+
+/**
+ * Fonction permettant d'appliquer la commande if ( if TEST { CMD_1 } ou f TEST { CMD_1 } else { CMD_2 }).
+ * @return Un entier supérieure à 1 si une erreur s'est produite pendant le processus et 0 si tout s'est bien passé.
+ */
+int ifCommand(command *commande){
 
     pid_t pid = 0;
     if((pid = fork()) == 0){
