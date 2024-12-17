@@ -170,7 +170,13 @@ char *remove_extension_from_file(const char *arg);
 int isBraceGood(char **partition);
 int isBraceGood2(char **partition);
 int isIllegalName(char *argv);
-int hasElse(char **command);
+
+/**
+ * Fonction qui verifie si il y a un "else" dans une commande structurée if...
+ * @param commande une commande structurée if...else
+ * @return la indice/position du "else" ou -1 si il n'y a pas de "else" dans la commande*/
+int hasElse(char **commande);
+
+
 command *makeSubPartition(command *commande, int first, int last);
-int applyTest(char **cmd_test);
 #endif

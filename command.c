@@ -434,6 +434,7 @@ int cmd_if(command *commande){
     char  **argv = commande->list;
 
     int result = 0;
+    int test_result;
     char *errorMessage = "usage: if [ TEST ] { CMD } or if [ TEST ] { CMD_1 } else { CMD_2 } or if test condition { CMD }...\n";
 
     if(argc < 7){
@@ -470,14 +471,9 @@ int cmd_if(command *commande){
             goto cleanup_return;
         }
     }
-
-    command *cmd_test = NULL;
-    if (strcmp("test", argv[1]) == 0){
-        cmd_test = makeSubPartition(commande,2,first_opening_bracket_pos -1); // si on a if test condition { CMD } ...
-    }else{
-        cmd_test = makeSubPartition(commande,2,first_opening_bracket_pos -2); // si on a if [ TEST ] { CMD } ...
-    }
-    int test_result = applyTest(cmd_test->list);
+    
+    command *cmd_test = makeSubPartition(commande,1,first_opening_bracket_pos -1);
+    applyCommand(cmd_test, &test_result);
     command *cmd_1 = NULL;
     command *cmd_2 = NULL;
 
