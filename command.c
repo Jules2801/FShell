@@ -462,9 +462,9 @@ int cmd_if(int argc, char **argv){
 
     char **cmd_test = NULL;
     if (strcmp("test", argv[1]) == 0){
-        cmd_test = makeSubPartition(argv,2,first_opening_bracket_pos -1);
+        cmd_test = makeSubPartition(argv,2,first_opening_bracket_pos -1); // si on a if test condition { CMD } ...
     }else{
-        cmd_test = makeSubPartition(argv,2,first_opening_bracket_pos -2);
+        cmd_test = makeSubPartition(argv,2,first_opening_bracket_pos -2); // si on a if [ TEST ] { CMD } ...
     }
     int test_result = applyTest(cmd_test);
     char **cmd_1 = NULL;

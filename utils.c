@@ -545,14 +545,14 @@ int hasElse(char **command) {
 
 /**
  * Fonction qui exécute le test correspondant.
- * @param cmd_test une test/une condition dans une commande structurée if...
+ * @param cmd_test un test/une condition dans une commande structurée if...
  * @return la valeur de retour du test (echec ou réussite) ou -1 si le test n'est pas reconnu '*/
 int applyTest(char **cmd_test) {
     if (strcmp(cmd_test[0], "-d") == 0) {
-        return (access(cmd_test[1], F_OK) == 0 && access(cmd_test[1], R_OK) == 0 && opendir(cmd_test[1]) != NULL) ? 0 : 1;
+        return (access(cmd_test[1], F_OK) == 0 && opendir(cmd_test[1]) != NULL) ? 0 : 1;
     }
     if (strcmp(cmd_test[0], "-f") == 0) {
-        return (access(cmd_test[1], F_OK) == 0 && access(cmd_test[1], R_OK) == 0) ? 0 : 1;
+        return (access(cmd_test[1], F_OK) == 0 && opendir(cmd_test[1]) == NULL) ? 0 : 1;
     }
     if (strcmp(cmd_test[0], "-e") == 0) {
         return (access(cmd_test[1], F_OK) == 0) ? 0 : 1;
