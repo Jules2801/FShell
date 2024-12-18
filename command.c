@@ -547,7 +547,12 @@ int cmd_for(command *commande){
     }
 
     int opt;
-    optind = 0;
+    #ifdef __APPLE__
+        optind = 1;
+    #else
+        optind = 0;
+    #endif
+    
     while((opt = getopt(argc, argv+3, "+:Are:t:p:")) != -1){
         switch(opt){
             case 'A':
