@@ -434,18 +434,13 @@ int cmd_if(command *commande){
     char  **argv = commande->list;
 
     int result = 0;
+    int test_result;
     char *errorMessage = "usage: if [ TEST ] { CMD } or if [ TEST ] { CMD_1 } else { CMD_2 } or if test condition { CMD }...\n";
 
-    if(argc < 7){
+    if(argc < 5){
         write(2, errorMessage, strlen(errorMessage));
         result = 2;
         goto cleanup_return;
-    }
-
-    if((strcmp("test", argv[1]) != 0) && (strcmp("[", argv[1]) != 0)){
-        write(2, errorMessage, strlen(errorMessage));
-        result = 2;
-        goto cleanup_return; 
     }
 
     int first_opening_bracket_pos;
@@ -462,39 +457,29 @@ int cmd_if(command *commande){
         goto cleanup_return;
     }
 
-    int else_pos = hasElse(argv);
-    if(else_pos > 0){
+    int else_pos = argc;
+    hasElse(argv, &else_pos); // Verifie si la commande contient un else
+    if(else_pos != argc){
         if(strcmp("}", argv[else_pos - 1]) != 0 || strcmp("{", argv[else_pos + 1]) != 0 ){
             write(2, errorMessage, strlen(errorMessage));
             result = 2;
             goto cleanup_return;
         }
     }
-
-    command *cmd_test = NULL;
-    if (strcmp("test", argv[1]) == 0){
-        cmd_test = makeSubPartition(commande,2,first_opening_bracket_pos -1); // si on a if test condition { CMD } ...
-    }else{
-        cmd_test = makeSubPartition(commande,2,first_opening_bracket_pos -2); // si on a if [ TEST ] { CMD } ...
-    }
-    int test_result = applyTest(cmd_test->list);
+    
+    command *cmd_test = makeSubPartition(commande,1,first_opening_bracket_pos -1);
+    applyCommand(cmd_test, &test_result);
     command *cmd_1 = NULL;
     command *cmd_2 = NULL;
 
-    if(else_pos != -1){
-        if(test_result == 0){
-            cmd_1 = makeSubPartition(commande,first_opening_bracket_pos + 1, else_pos - 2);
-            applyCommand(cmd_1, &result);
-            goto cleanup_return;
-        }else{
-            cmd_2 = makeSubPartition(commande,else_pos + 2, argc - 2);
-            applyCommand(cmd_2, &result);
-            goto cleanup_return;
-        }
+    if(test_result == 0){
+        cmd_1 = makeSubPartition(commande,first_opening_bracket_pos + 1, else_pos - 2);
+        applyCommand(cmd_1, &result);
+        goto cleanup_return;
     }else{
-        if(test_result == 0){
-            cmd_1 = makeSubPartition(commande,first_opening_bracket_pos + 1, argc - 2);
-            applyCommand(cmd_1, &result);
+        if(else_pos != argc){
+            cmd_2 = makeSubPartition(commande, else_pos + 2, argc - 2);
+            applyCommand(cmd_2, &result);
             goto cleanup_return;
         }   
     }
