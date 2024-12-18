@@ -540,17 +540,17 @@ command *copyPartition(command *commande){
 }
 
 /**
- * Fonction qui verifie si il y a un "else" dans une commande structurée if...
- * @param commande une commande structurée if...else
- * @return la indice/position du "else" ou -1 si il n'y a pas de "else" dans la commande*/
-int hasElse(char **commande) {
+ * Fonction qui stocke la position d'un "else" das une commande structurée "if" s'il existe.
+ * @param commande La commande structurée.
+ * @param else_pos pointeur vers une variable de type int.
+ */
+void hasElse(char **commande, int *else_pos) {
     int i = 0;
     while (commande[i] != NULL) {
         if (strcmp(commande[i], "else") == 0) {
-            return i;
+            *else_pos = i;
+            break;
         }
         i++;
     }
-
-    return -1;
 }

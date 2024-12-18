@@ -457,8 +457,9 @@ int cmd_if(command *commande){
         goto cleanup_return;
     }
 
-    int else_pos = hasElse(argv); // Verifie si la commande contient un "else"
-    if(else_pos > 0){
+    int else_pos = argc;
+    hasElse(argv, &else_pos); // Verifie si la commande contient un else
+    if(else_pos != argc){
         if(strcmp("}", argv[else_pos - 1]) != 0 || strcmp("{", argv[else_pos + 1]) != 0 ){
             write(2, errorMessage, strlen(errorMessage));
             result = 2;
@@ -496,20 +497,14 @@ int cmd_if(command *commande){
     command *cmd_1 = NULL;
     command *cmd_2 = NULL;
 
-    if(else_pos != -1){
-        if(test_result == 0){
-            cmd_1 = makeSubPartition(commande,first_opening_bracket_pos + 1, else_pos - 2);
-            applyCommand(cmd_1, &result);
-            goto cleanup_return;
-        }else{
-            cmd_2 = makeSubPartition(commande,else_pos + 2, argc - 2);
-            applyCommand(cmd_2, &result);
-            goto cleanup_return;
-        }
+    if(test_result == 0){
+        cmd_1 = makeSubPartition(commande,first_opening_bracket_pos + 1, else_pos - 2);
+        applyCommand(cmd_1, &result);
+        goto cleanup_return;
     }else{
-        if(test_result == 0){
-            cmd_1 = makeSubPartition(commande,first_opening_bracket_pos + 1, argc - 2);
-            applyCommand(cmd_1, &result);
+        if(else_pos != argc){
+            cmd_2 = makeSubPartition(commande, else_pos + 2, argc - 2);
+            applyCommand(cmd_2, &result);
             goto cleanup_return;
         }   
     }
