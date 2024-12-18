@@ -6,13 +6,18 @@
 #include <ctype.h>
 #include <readline/readline.h>
 #include <readline/history.h>
+#include "commandList.h"
 #include "prompt.h"
 #include "utils.h"
 #include "command.h"
 #include "glob.h"
+#include "commandList.h"
 
 char *previous_directory = NULL;
 char *current_directory = NULL;
+int isInRed = 0;
+int isOutRed = 0;
+int isErrRed = 0;
 
 
 
@@ -32,13 +37,13 @@ int main(int argc, char **argv){
         if(strlen(input) == 0) continue;
         if(*input) add_history(input);
         
-        char **command = split_command(input);
+        command *commande = newCommand(input);
 
         free(prompt_string);
         free(input);
 
-        applyCommand(command, &error);
-        free_double_buffer(command, partSize(command));
+        applyCommand(commande, &error);
+        freeCommand(commande);
     }
 
     if(error < 0) exit(255);

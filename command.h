@@ -1,6 +1,7 @@
 #ifndef COMMAND_H
 #define COMMAND_H
+#include "commandList.h"
 
-void applyCommand(char **command, int *error);
+void applyCommand(command *commande, int *error);
 
 #endif

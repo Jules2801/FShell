@@ -7,6 +7,9 @@
 #include <ctype.h>
 #include <dirent.h>
 #include <sys/stat.h>
+#include "commandList.h"
+
+void free_double_buffer(char **buffer, int bufsize);
 
 /**
  * Fonction permettant de compter le nombre de mots dans une chaîne de caractère.
@@ -55,6 +58,7 @@ char **split_command(char *command){
                 buffer[count] = malloc((wordLen + 1) * sizeof(char));
                 if (buffer[count] == NULL) {
                     perror("Erreur lors de l'allocation mémoire");
+                    free_double_buffer(buffer, count);
                     exit(1);
                 }
                 strncpy(buffer[count], command + start, wordLen);
@@ -71,7 +75,7 @@ char **split_command(char *command){
         }
     }
     
-    *(buffer+count) = (char *) NULL;
+    buffer[count] = (char *) NULL;
     return buffer;
 }
 
@@ -81,6 +85,7 @@ char **split_command(char *command){
  * @return Taille de la partition.
  */
 int partSize(char **argv){
+    if(*(argv) == NULL) return 0;
     int i = 0;
     while(*(argv+i) != (char *) NULL){
         i++;
@@ -124,6 +129,7 @@ void free_double_buffer(char **buffer, int bufsize){
     }
     free(buffer);
 }
+
 
 /**
  * Fonction permettant de vérifier qu'une chaîne de caractère est égale à une autre sur les n premier octets.
@@ -183,8 +189,6 @@ char *replace_var(char *arg, char *var, char *name){
         else buf[j++] = arg[i++];
     }
 
-    printf("%d c'est le dernier buffer\n", j);
-
     buf[j] = '\0';
     return buf;
 }
@@ -196,29 +200,30 @@ char *replace_var(char *arg, char *var, char *name){
  * @param filename Nom de l'entrée.
  * @return Nouvelle partition de chaîne de caractère avec $F remplacé par la référence de l'entrée.
  */
-char ** split_argv_for(int bufSize, char **argv, int argvsize, char *ref, char *varname){
-    char **res = NULL;
+command * split_argv_for(int bufSize, char **argv, int argvsize, char *ref, char *varname){
+    char **partition = NULL;
     int i;
-    if((res = malloc((bufSize + 1) * sizeof(char *))) == NULL) goto error;
+    if((partition = malloc((bufSize + 1) * sizeof(char *))) == NULL) goto error;
     for(i = 0; i < argvsize-2; i++){
         if(strcmp(varname, argv[i]) == 0){
-            if((res[i] = malloc(strlen(ref) + 1)) == NULL) goto error;
-            strcpy(res[i], ref);
+            if((partition[i] = malloc(strlen(ref) + 1)) == NULL) goto error;
+            strcpy(partition[i], ref);
         }
         
         else{
-            if((res[i] = malloc(strlen(argv[i]) + 1)) == NULL) goto error;
-            //char *newvar = replace_var(argv[i], varname, ref);
-            strcpy(res[i], argv[i]);
-            //free(newvar);
+            char *newvar = replace_var(argv[i], varname, ref);
+            if((partition[i] = malloc(strlen(newvar) + 1)) == NULL) goto error;
+            strcpy(partition[i], newvar);
+            free(newvar);
         };
     }
-    res[bufSize] = (char *) NULL;
+    partition[bufSize] = (char *) NULL;
+    command *res = newCommandList(partition);
     return res;
 
     error:
         perror("Erreur lors de la copie d'une chaine de caractère");
-        if(res != NULL) free_double_buffer(res, bufSize+1);
+        if(partition != NULL) free_double_buffer(partition, bufSize+1);
         exit(1);
 }
 
@@ -273,10 +278,67 @@ char *extract_extension(char* arg){
     char *res;
     if((res = malloc((count + 1) * sizeof(char))) == NULL){
         perror("Erreur lors de l'allocation mémoire");
-        exit(1);
+        return NULL;
     }
 
     strcpy(res, (arg+(strlen(arg)-count)));
+
+    return res;
+}
+
+int isBraceGood(char **partition){
+    int size = partSize(partition);
+    int braceOpen = 0;
+
+    for(int i = 0; i < size; i++){
+        if(strcmp(partition[i], "{") == 0) braceOpen++;
+        else if(strcmp(partition[i], "}") == 0){
+            if(braceOpen == 0) return 0;
+            braceOpen--;
+        }
+    }
+
+    return braceOpen == 0;
+}
+
+int isBraceGood2(char **partition){
+    int size = partSize(partition);
+    int braceOpen = 0;
+
+    for(int i = 0; i < size; i++){
+        if(strcmp(partition[i], "[") == 0) braceOpen++;
+        else if(strcmp(partition[i], "]") == 0){
+            if(braceOpen == 0) return 0;
+            braceOpen--;
+        }
+    }
+
+    return braceOpen == 0;
+}
+
+int isIllegalName(char *argv){
+    return strcmp(argv, "{") == 0 || strcmp(argv, "}") == 0 || strcmp(argv, "<") == 0 || strcmp(argv, ">") == 0 || strcmp(argv, "|") == 0 || strcmp(argv, ";") == 0 || strcmp(argv, "$") == 0;
+}
+
+char *remove_extension_from_file(const char *arg){
+    if (arg == NULL || strlen(arg) == 0) 
+        return NULL;
+
+    const char *last_dot = strrchr(arg, '.');
+
+    if (last_dot == NULL || last_dot == arg) 
+        return strdup(arg);
+
+    size_t base_length = last_dot - arg;
+
+    char *res = malloc(base_length + 1);
+    if (res == NULL) {
+        perror("Erreur lors de l'allocation mémoire");
+        return NULL;
+    }
+
+    strncpy(res, arg, base_length);
+    res[base_length] = '\0';
 
     return res;
 }
@@ -307,11 +369,13 @@ char *concat(char *arg1, char *arg2){
  * @param partition La partition
  * @return 1 si cela représente bien une partition et 0 si ce n'est pas une partition du tout et -1 si cela devait représenter une partition.
  */
-int isStructuredCommand(char **partition){
+int isStructuredCommand(command *command){
     char *s = "Usage: CMD_1 ; CMD_2 ; ... ; CMD_N\n";
     int hasSemi = 0;
     int hasBrace = 0;
-    int partsize = partSize(partition);
+    int hasQuote = 0;
+    int partsize = command->size;
+    char **partition = command->list;
 
     if(strcmp(";", partition[0]) == 0 || strcmp(";", partition[partsize-1]) == 0){
         write(2, s, strlen(s));
@@ -321,7 +385,11 @@ int isStructuredCommand(char **partition){
     for(int i = 1; i < partsize-1; i++){
         if(strcmp(partition[i], "{") == 0) hasBrace = 1;
         else if(strcmp(partition[i], "}") == 0) hasBrace = 0;
-        else if (strcmp(partition[i], ";") == 0 && hasBrace == 0) return 1;
+        else if(strstr(partition[i], "\"") != NULL){
+            if(hasQuote == 0) hasQuote = 1;
+            else hasQuote = 0;
+        }
+        else if (strcmp(partition[i], ";") == 0 && hasBrace == 0 && hasQuote == 0) return 1;
     }
 
     return 0;
@@ -332,10 +400,11 @@ int isStructuredCommand(char **partition){
  * @param Partition représentant une commande structurée.
  * @return Le nombre de commande dans une commande structurée.
  */
-int nbCommand(char **partition){
+int nbCommand(command *command){
     int res = 0;
     int hasBrace = 0;
-    int partsize = partSize(partition);
+    char **partition = command->list;
+    int partsize = command->size;
 
     for(int i = 0; i < partsize; i++){
         if(strcmp(partition[i], "{") == 0) hasBrace = 1;
@@ -349,13 +418,14 @@ int nbCommand(char **partition){
 
 /**
  * Fonction permettant de créer une sous-partition d'une partition donné en fonction de la position du début et de la fin.
- * @param partition La partition de base
+ * @param commande La partition de base
  * @param first Position du début de la sous-partition
  * @param last Position de la fin de la sous-partition
  * @return La nouvelle sous-partition voulue.
  */
-char **makeSubPartition(char **partition, int first, int last){
+command *makeSubPartition(command *commande, int first, int last){
     char **sub;
+    char **partition = commande->list;
     int subsize = last-first+2;
     if((sub = malloc((subsize) * sizeof(char *))) == NULL){
         perror("Erreur lors de l'allocation mémoire");
@@ -364,19 +434,19 @@ char **makeSubPartition(char **partition, int first, int last){
 
     int pos = 0;
     for(int i = first; i <= last; i++){
-
         int size = strlen(partition[i]) + 1;
         if((sub[pos] = malloc(size + 1)) == NULL){
             perror("Erreur lors de l'allocation mémoire");
             exit(1);
         }
-
         strcpy(sub[pos], partition[i]);
         pos++;
     }
 
     sub[subsize-1] = (char *) NULL;
-    return sub;
+   
+    command* res = newCommandList(sub);
+    return res;
 }
 
 /**
@@ -385,9 +455,11 @@ char **makeSubPartition(char **partition, int first, int last){
  * @param size Pointeur qui correspondra à la taille de la liste de partition
  * @return La liste de partition de notre commande structurée.
  */
-char ***makeStructuredCommand(char **partition, int *size){
-    char ***structuredCommand;
-    int scsize = nbCommand(partition);
+command **makeStructuredCommand(command *commande, int *size){
+    command **structuredCommand;
+    char **partition = commande->list;
+    int scsize = nbCommand(commande);
+    int partSize = commande->size;
 
     int first = 0;
     int last = 0;
@@ -395,24 +467,24 @@ char ***makeStructuredCommand(char **partition, int *size){
 
     int hasBrace = 0;
 
-    if((structuredCommand = malloc(scsize * sizeof(char **))) == NULL){
+    if((structuredCommand = malloc(scsize * sizeof(command *))) == NULL){
         perror("Erreur lors de l'allocation mémoire");
         exit(1);
     }
 
-    for(int i = 0; i < partSize(partition); i++){
+    for(int i = 0; i < partSize; i++){
         if(strcmp(partition[i], "{") == 0) hasBrace = 1;
         else if(strcmp(partition[i], "}") == 0) hasBrace = 0;
         else if(strcmp(partition[i], ";") == 0 && hasBrace == 0){
             last = i-1;
-            structuredCommand[pos] = makeSubPartition(partition, first, last);
+            structuredCommand[pos] = makeSubPartition(commande, first, last);
             first = i+1;
             pos++;
         }
     }
 
-    if(first < partSize(partition)) {
-        structuredCommand[pos] = makeSubPartition(partition, first, partSize(partition)-1);
+    if(first < partSize) {
+        structuredCommand[pos] = makeSubPartition(commande, first, partSize-1);
         pos++;
     }
     *size = pos;
@@ -440,11 +512,12 @@ int isSameType(mode_t mode, char f){
  * Fonction permettant de copier une partition de chaîne de caractère.
  */
 
-char **copyPartition(char **partition){
-    int size = partSize(partition);
+command *copyPartition(command *commande){
+    int size = commande->size;
+    char **partition = commande->list;
     char **buf;
 
-    if((buf = malloc(size * sizeof(char *))) == NULL){
+    if((buf = malloc((size+1) * sizeof(char *))) == NULL){
         perror("Erreur lors de l'allocation mémoire");
         exit(1);
     }
@@ -452,12 +525,32 @@ char **copyPartition(char **partition){
     for(int i = 0; i < size; i++){
         if((buf[i] = malloc(strlen(partition[i]) + 1)) == NULL){
             perror("Erreur lors de l'allocation mémoire");
-            free_double_buffer(buf, size);
+            free_double_buffer(buf, i);
             exit(1);
         }
 
         strcpy(buf[i], partition[i]);
     }
 
-    return buf;
+    buf[size] = (char *) NULL;
+
+    command *res = newCommandList(buf);
+
+    return res;
+}
+
+/**
+ * Fonction qui stocke la position d'un "else" das une commande structurée "if" s'il existe.
+ * @param commande La commande structurée.
+ * @param else_pos pointeur vers une variable de type int.
+ */
+void hasElse(char **commande, int *else_pos) {
+    int i = 0;
+    while (commande[i] != NULL) {
+        if (strcmp(commande[i], "else") == 0) {
+            *else_pos = i;
+            break;
+        }
+        i++;
+    }
 }
