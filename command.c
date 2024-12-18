@@ -457,7 +457,7 @@ int cmd_if(command *commande){
         goto cleanup_return;
     }
 
-    int else_pos = hasElse(argv);
+    int else_pos = hasElse(argv); // Verifie si la commande contient un "else"
     if(else_pos > 0){
         if(strcmp("}", argv[else_pos - 1]) != 0 || strcmp("{", argv[else_pos + 1]) != 0 ){
             write(2, errorMessage, strlen(errorMessage));
@@ -467,7 +467,32 @@ int cmd_if(command *commande){
     }
     
     command *cmd_test = makeSubPartition(commande,1,first_opening_bracket_pos -1);
-    applyCommand(cmd_test, &test_result);
+    pid_t pid = fork();
+
+    if(pid == 0){
+        int dev_null = open("/dev/null", O_WRONLY);
+        dup2(dev_null, STDOUT_FILENO);
+        dup2(dev_null, STDERR_FILENO);
+        close(dev_null);
+
+        applyCommand(cmd_test, &test_result);
+
+        if(test_result >= 0){
+            exit(test_result);
+        }else{
+            exit(1);
+        }
+    }else{
+        int status;
+        waitpid(pid, &status, 0);
+
+        if(WIFEXITED(status)){
+            test_result = WEXITSTATUS(status);
+        }else{
+            test_result = 1;
+        }
+    }
+
     command *cmd_1 = NULL;
     command *cmd_2 = NULL;
 
