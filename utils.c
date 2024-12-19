@@ -369,15 +369,15 @@ char *concat(char *arg1, char *arg2){
  * @param partition La partition
  * @return 1 si cela représente bien une partition et 0 si ce n'est pas une partition du tout et -1 si cela devait représenter une partition.
  */
-int isStructuredCommand(command *command){
-    char *s = "Usage: CMD_1 ; CMD_2 ; ... ; CMD_N\n";
+int isStructuredCommand(command *command,char *separator){
+    char *s = "Usage: CMD_1 [separator] CMD_2 [separator] ... [separator] CMD_N\n";
     int hasSemi = 0;
     int hasBrace = 0;
     int hasQuote = 0;
     int partsize = command->size;
     char **partition = command->list;
 
-    if(strcmp(";", partition[0]) == 0 || strcmp(";", partition[partsize-1]) == 0){
+    if(strcmp(separator, partition[0]) == 0 || strcmp(separator, partition[partsize-1]) == 0){
         write(2, s, strlen(s));
         return -1;
     }
@@ -389,11 +389,12 @@ int isStructuredCommand(command *command){
             if(hasQuote == 0) hasQuote = 1;
             else hasQuote = 0;
         }
-        else if (strcmp(partition[i], ";") == 0 && hasBrace == 0 && hasQuote == 0) return 1;
+        else if (strcmp(partition[i], separator) == 0 && hasBrace == 0 && hasQuote == 0) return 1;
     }
 
     return 0;
 }
+
 
 /**
  * Fonction permettant de savoir le nombre de commande dans une commande structurée.
@@ -416,6 +417,33 @@ int nbCommand(command *command){
     return res + 1;
 }
 
+
+// Modification de makeSubPartition pour une meilleure gestion de la mémoire
+command *makeSubPartition(command *commande, int first, int last) {
+    if(first > last) return NULL;
+    
+    int subsize = last - first + 2;  // +1 pour les indices, +1 pour le NULL terminal
+    char **sub = malloc(subsize * sizeof(char *));
+    if(!sub) {
+        perror("Erreur d'allocation");
+        exit(1);
+    }
+    
+    for(int i = 0; i < subsize - 1; i++) {
+        sub[i] = strdup(commande->list[first + i]);
+        if(!sub[i]) {
+            // Nettoyer en cas d'erreur
+            for(int j = 0; j < i; j++) free(sub[j]);
+            free(sub);
+            perror("Erreur d'allocation");
+            exit(1);
+        }
+    }
+    
+    sub[subsize - 1] = NULL;
+    return newCommandList(sub);
+}
+
 /**
  * Fonction permettant de créer une sous-partition d'une partition donné en fonction de la position du début et de la fin.
  * @param command La partition de base
@@ -423,78 +451,56 @@ int nbCommand(command *command){
  * @param last Position de la fin de la sous-partition
  * @return La nouvelle sous-partition voulue.
  */
-command *makeSubPartition(command *commande, int first, int last){
-    char **sub;
-    char **partition = commande->list;
-    int subsize = last-first+2;
-    if((sub = malloc((subsize) * sizeof(char *))) == NULL){
-        perror("Erreur lors de l'allocation mémoire");
-        free_double_buffer(sub, subsize);
-        exit(1);
-    }
 
-    int pos = 0;
-    for(int i = first; i <= last; i++){
 
-        int size = strlen(partition[i]) + 1;
-        if((sub[pos] = malloc(size + 1)) == NULL){
-            perror("Erreur lors de l'allocation mémoire");
-            free_double_buffer(sub, i);
-            exit(1);
-        }
-
-        strcpy(sub[pos], partition[i]);
-        pos++;
-    }
-
-    sub[subsize-1] = (char *) NULL;
-   
-    command* res = newCommandList(sub);
-    return res;
-}
-
-/**
- * Fonction permettant de créer une liste de partition dans le cas d'une commande structurée :
- * @param partition Partition représentant, normalement, une commande structurée.
- * @param size Pointeur qui correspondra à la taille de la liste de partition
- * @return La liste de partition de notre commande structurée.
- */
-command **makeStructuredCommand(command *commande, int *size){
+// Modification de makeStructuredCommand pour mieux gérer les séparateurs
+command **makeStructuredCommand(command *commande, int *size, char *separator) {
     command **structuredCommand;
     char **partition = commande->list;
-    int scsize = nbCommand(commande);
     int partSize = commande->size;
-
-    int first = 0;
-    int last = 0;
-    int pos = 0;
-
+    
+    // Compter d'abord le nombre de commandes
+    int cmdCount = 1;  // Au moins une commande
     int hasBrace = 0;
-
-    if((structuredCommand = malloc(scsize * sizeof(command *))) == NULL){
-        perror("Erreur lors de l'allocation mémoire");
-        exit(1);
-    }
-
-    for(int i = 0; i < partSize; i++){
+    for(int i = 0; i < partSize; i++) {
         if(strcmp(partition[i], "{") == 0) hasBrace = 1;
         else if(strcmp(partition[i], "}") == 0) hasBrace = 0;
-        else if(strcmp(partition[i], ";") == 0 && hasBrace == 0){
-            last = i-1;
-            structuredCommand[pos] = makeSubPartition(commande, first, last);
-            first = i+1;
-            pos++;
+        else if(strcmp(partition[i], separator) == 0 && !hasBrace) cmdCount++;
+    }
+    
+    // Allouer le tableau de commandes
+    if((structuredCommand = malloc(cmdCount * sizeof(command *))) == NULL) {
+        perror("Erreur d'allocation");
+        exit(1);
+    }
+    
+    // Découper en sous-commandes
+    int cmdStart = 0;
+    int cmdIndex = 0;
+    hasBrace = 0;
+    
+    for(int i = 0; i < partSize; i++) {
+        if(strcmp(partition[i], "{") == 0) hasBrace = 1;
+        else if(strcmp(partition[i], "}") == 0) hasBrace = 0;
+        else if(strcmp(partition[i], separator) == 0 && !hasBrace) {
+            // Ne pas inclure le séparateur dans la sous-commande
+            structuredCommand[cmdIndex] = makeSubPartition(commande, cmdStart, i - 1);
+            cmdStart = i + 1;
+            cmdIndex++;
         }
     }
-
-    if(first < partSize) {
-        structuredCommand[pos] = makeSubPartition(commande, first, partSize-1);
-        pos++;
+    
+    // Dernière commande
+    if(cmdStart < partSize) {
+        structuredCommand[cmdIndex] = makeSubPartition(commande, cmdStart, partSize - 1);
+        cmdIndex++;
     }
-    *size = pos;
-
+    
+    *size = cmdIndex;
     return structuredCommand;
 }
+
+
 
 /**
  * Fonction permettant de savoir si un type de fichier correspond au bon caractère

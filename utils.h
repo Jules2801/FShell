@@ -125,8 +125,8 @@ char *concat(char *arg1, char *arg2);
  * @param command La commande.
  * @return 1 si structurée, 0 sinon, -1 si invalide.
  */
-int isStructuredCommand(command *command);
-
+int isStructuredCommand(command *command,char *separator);
+ 
 /**
  * Fonction permettant de compter le nombre de commandes dans une commande structurée.
  * @param command La commande structurée.
@@ -149,7 +149,7 @@ command *makeSubPartition(command *commande, int first, int last);
  * @param size Pointeur pour stocker la taille de la liste.
  * @return La liste de partitions.
  */
-command **makeStructuredCommand(command *commande, int *size);
+command **makeStructuredCommand(command *commande, int *size,char *separator);
 
 /**
  * Fonction permettant de vérifier si un type de fichier correspond au caractère donné.

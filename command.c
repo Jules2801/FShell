@@ -36,6 +36,8 @@ int cmd_cd(command *command);
 int ifCommand(command *command);
 int cmd_if(command *commande);
 
+void appliquePipeline(command **commandes,int size,int *error);
+
 /**
  * Fonction permettant de mettre a jour le repertoire courant et l'ancien
  * @param new_directory le chemin du nouveau repertoire courant
@@ -67,9 +69,11 @@ void update_directories(const char *new_directory) {
  * @param command Tout ce qui sera utiles pour appliquer la commande externe, telle que son nom et ses options.
  */
 void applyCommand(command *commande, int *error){
-    if(isStructuredCommand(commande)){
+
+
+    if(isStructuredCommand(commande,";")){
         int size;
-        command **commandes = makeStructuredCommand(commande, &size);
+        command **commandes = makeStructuredCommand(commande, &size,";");
         
         for(int i = 0; i < size; i++){
             applyCommand(commandes[i], error);
@@ -77,6 +81,17 @@ void applyCommand(command *commande, int *error){
         }
         free(commandes);
     }
+    else if (isStructuredCommand(commande,"|")){
+        int size;
+
+
+        command **commandes = makeStructuredCommand(commande, &size, "|");
+
+        appliquePipeline(commandes, size, error);
+
+
+    }
+
     else{
         int countIn = 0;
         int oldIn = dup(STDIN_FILENO);
@@ -162,6 +177,77 @@ void applyCommand(command *commande, int *error){
         close(oldErr);
         isErrRed = 0;
     }
+}
+void appliquePipeline(command **commandes,int size,int *error){
+
+    int i;
+
+
+    int pipes[size][2];
+    pid_t pids[size];
+
+    for (i = 0; i < size ; i++) {
+        if (pipe(pipes[i]) == -1) {
+            perror("pipe");
+            exit(1);
+        }
+    }
+
+    for (i = 0; i < size; i++) {
+        pids[i] = fork();
+        if (pids[i] == -1) {
+            perror("fork");
+            exit(1);
+        } else if (pids[i] == 0) {
+        
+            if (i > 0) {
+    
+                dup2(pipes[i-1][0], 0);
+             
+                close(pipes[i-1][0]);
+                close(pipes[i-1][1]);
+            }
+
+            if (i < size -1) {
+              
+                dup2(pipes[i][1], 1);
+              
+                close(pipes[i][0]);
+                close(pipes[i][1]);
+            }
+            for (int j = 0; j < size - 1; j++) {// on nettoie les tubes pas necessaires
+                if (j != i - 1 && j != i) {
+                    close(pipes[j][0]);
+                    close(pipes[j][1]);
+                }
+            }
+            applyCommand(commandes[i], error);
+            if(*error >= 0)exit(*error);
+            exit(255);
+        }
+    }
+
+
+    for (i = 0; i < size - 1; i++) {
+        close(pipes[i][0]);
+        close(pipes[i][1]);
+    }
+
+    
+    for (i = size-1; i >=0; i--) {
+        int status;
+        waitpid(pids[i], &status, 0);
+        if (WIFEXITED(status)) {
+            *error = WEXITSTATUS(status);
+        } else {
+            *error = 1;
+        }
+    }
+
+    for (i = 0; i < size; i++) {
+        freeCommand(commandes[i]);
+    }
+    free(commandes);
 }
 
 /**
@@ -562,7 +648,7 @@ int cmd_for(command *commande){
     }
 
     int opt;
-    optind = 0;
+    optind = 1;
     while((opt = getopt(argc, argv+3, "+:Are:t:p:")) != -1){
         switch(opt){
             case 'A':

@@ -79,7 +79,21 @@ void freeCommand(command *command){
 }
 
 
+/**
+ * Fonction permettant de créer une liste chaînée vide
+ * @return Une liste chaînée ou NULL si problème d'allocation mémoire
+ **/
+linkedList *newEmptyLinkedList(){
+    linkedList *newlist = malloc(sizeof(linkedList));
+    if(!newlist){
+        write(2, "Erreur d'allocation d'une liste chaînée\n", 41);
+        return NULL;
+    }
+    newlist -> head = NULL;
+    
+    return newlist;
 
+}
 
 /**
  * Fonction permettant de créer une liste chaînée 
