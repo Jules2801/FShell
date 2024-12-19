@@ -78,6 +78,14 @@ void applyCommand(command *commande, int *error){
         free(commandes);
     }
     else{
+        if(strcmp(commande->list[0], "for") == 0) {
+            *error =  forCommand(commande);
+            return;
+        }
+        else if(strcmp(commande->list[0], "if") == 0){
+            *error = ifCommand(commande);
+            return;
+        }
         int countIn = 0;
         int oldIn = dup(STDIN_FILENO);
 
@@ -140,8 +148,6 @@ void applyCommand(command *commande, int *error){
         if(strcmp(partitionWithoutRed[0], "pwd") == 0) *error = pwdCommand(command_without_red);
         else if(strcmp(partitionWithoutRed[0], "exit") == 0) *error = exitCommand(command_without_red, error);
         else if(strcmp(partitionWithoutRed[0], "ftype") == 0) *error = ftypeCommand(command_without_red);
-        else if(strcmp(partitionWithoutRed[0], "for") == 0) *error =  forCommand(command_without_red);
-        else if(strcmp(partitionWithoutRed[0], "if") == 0) *error = ifCommand(command_without_red);
         else if(strcmp(partitionWithoutRed[0], "cd") == 0) *error = cdCommand(command_without_red);
         else *error = commande_externe(command_without_red);
 
@@ -439,8 +445,7 @@ int cmd_if(command *commande){
 
     if(argc < 5){
         write(2, errorMessage, strlen(errorMessage));
-        result = 2;
-        goto cleanup_return;
+        return 2;
     }
 
     int first_opening_bracket_pos;
@@ -453,8 +458,7 @@ int cmd_if(command *commande){
 
     if(strcmp("}", argv[argc-1]) != 0 || strcmp("{", argv[first_opening_bracket_pos]) != 0 || isBraceGood(argv) == 0 || isBraceGood2(argv) == 0){
         write(2, errorMessage, strlen(errorMessage));
-        result = 2;
-        goto cleanup_return;
+        return 2;
     }
 
     int else_pos = argc;
@@ -462,8 +466,7 @@ int cmd_if(command *commande){
     if(else_pos != argc){
         if(strcmp("}", argv[else_pos - 1]) != 0 || strcmp("{", argv[else_pos + 1]) != 0 ){
             write(2, errorMessage, strlen(errorMessage));
-            result = 2;
-            goto cleanup_return;
+            return 2;
         }
     }
     
