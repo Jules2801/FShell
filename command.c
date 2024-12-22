@@ -648,7 +648,6 @@ int cmd_for(command *commande){
             if(type == '\0' || isSameType(st.st_mode, type)){
 
                 if(max_parralel > 0){
-                    //printf("On creer la liste ");
                     if(commandList==NULL) commandList = newLinkedList(entry);
                     else addLast(commandList, entry);
 
@@ -684,16 +683,11 @@ int cmd_for(command *commande){
     }
 
 if (max_parralel > 0) {  // Si l'option -p est activée  
-    //printf("On rentre dans le cas après allocation -p \n");
     while(commandList->head != NULL){
-        //printf("On rentre dans la boucle de la liste ");
-        printf("active process : %d max : %d\n", active_process, max_parralel);
         if (active_process < max_parralel) {
-            printf("fork");
         pid_t pid = fork();
         if (pid == 0) {
             int temp;
-            //printf("On applique la commande\n");
             applyCommand(commandList->head->data, &temp);
             if(temp > result) result = temp;
             
