@@ -615,6 +615,9 @@ int cmd_for(command *commande){
     }
 
     struct stat st;
+    int active_process = 0;
+    linkedList *commandList = NULL;
+
     while((entry = readdir(dir)) != NULL){
         char *newref = getRelativeReference(argv[3], entry->d_name);
         char *ref_extension = extract_extension(entry->d_name);
@@ -643,8 +646,18 @@ int cmd_for(command *commande){
             int bufsize = argc - (firstind) - 2;
             command *entry  = split_argv_for(bufsize, argv + firstind + 1, argc - firstind, newref, varname);
             if(type == '\0' || isSameType(st.st_mode, type)){
-                applyCommand(entry, &temp);
-                if(temp > result) result = temp;
+
+                if(max_parralel > 0){
+                    //printf("On creer la liste ");
+                    if(commandList==NULL) commandList = newLinkedList(entry);
+                    else addLast(commandList, entry);
+
+                }
+                else{
+                    applyCommand(entry, &temp);
+                    if(temp > result) result = temp;
+                }
+                
             }
             if(isSameType(st.st_mode, 'd') && r_option){
                 command *newpart = copyPartition(commande);
@@ -664,11 +677,43 @@ int cmd_for(command *commande){
                 if(temp > result) result = temp;
                 freeCommand(newpart);
             }
-            freeCommand(entry);
+            if(max_parralel < 0) freeCommand(entry);
         }
         free(newref);
         free(ref_extension);
     }
+
+if (max_parralel > 0) {  // Si l'option -p est activée  
+    //printf("On rentre dans le cas après allocation -p \n");
+    while(commandList->head != NULL){
+        //printf("On rentre dans la boucle de la liste ");
+        printf("active process : %d max : %d\n", active_process, max_parralel);
+        if (active_process < max_parralel) {
+            printf("fork");
+        pid_t pid = fork();
+        if (pid == 0) {
+            int temp;
+            //printf("On applique la commande\n");
+            applyCommand(commandList->head->data, &temp);
+            if(temp > result) result = temp;
+            
+            exit(result);
+        } else if (pid > 0) {
+            active_process++;
+            itere(commandList);
+
+        }
+    } else {
+        wait(NULL);
+        active_process--;
+        }
+    }
+
+    while (active_process > 0) {
+        wait(NULL);
+        active_process--;
+    }
+}
 
     goto cleanup_return;
 
