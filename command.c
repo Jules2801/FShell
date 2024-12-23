@@ -19,7 +19,7 @@
 int commande_externe(command *command);
 
 int forCommand(command *command);
-int cmd_for(command *command);
+int cmd_for(command *command,linkedList *commandList);
 
 int exitCommand(command *command, int *error);
 int cmd_exit(command *command, int *error);
@@ -179,7 +179,7 @@ void applyCommand(command *commande, int *error){
 int forCommand(command *commande){
     pid_t pid = 0;
     if((pid = fork()) == 0){
-        exit(cmd_for(commande));
+        exit(cmd_for(commande,NULL));
     }
     else{
         int status;
@@ -496,7 +496,7 @@ int cmd_if(command *commande){
     return result;
 }
 
-int cmd_for(command *commande){
+int cmd_for(command *commande,linkedList *commandList){
     int result = 0;
     char *errorMessage = "usage: for [variable-name] in REP [-A] [-r] [-e EXT] [-t TYPE] [-p MAX] { CMD }\n";
     char buf[1024];
@@ -616,7 +616,6 @@ int cmd_for(command *commande){
 
     struct stat st;
     int active_process = 0;
-    linkedList *commandList = NULL;
 
     while((entry = readdir(dir)) != NULL){
         char *newref = getRelativeReference(argv[3], entry->d_name);
@@ -671,7 +670,7 @@ int cmd_for(command *commande){
                 }
 
                 strcpy(newPartList[3], newref);
-                temp = cmd_for(newpart);
+                temp = cmd_for(newpart,commandList);
 
                 if(temp > result) result = temp;
                 freeCommand(newpart);
