@@ -19,7 +19,7 @@
 int commande_externe(command *command);
 
 int forCommand(command *command);
-int cmd_for(command *command,linkedList *commandList);
+int cmd_for(command *command,linkedList *commandList, int *parralel);
 
 int exitCommand(command *command, int *error);
 int cmd_exit(command *command, int *error);
@@ -179,7 +179,56 @@ void applyCommand(command *commande, int *error){
 int forCommand(command *commande){
     pid_t pid = 0;
     if((pid = fork()) == 0){
-        exit(cmd_for(commande,NULL));
+        linkedList *lcommandes = NULL;
+        int parrallel;
+        int ret = cmd_for(commande,lcommandes, &parrallel);
+        if(ret != 0){
+            freeLinkedList(lcommandes);
+            exit(ret);
+        }
+        int res = 0;
+        if(parrallel == -1){
+            while(lcommandes->head != NULL){
+                command *cmd = getCommand(lcommandes);
+                int temp;
+                applyCommand(cmd, &temp);
+                if(temp > res) res = temp;
+                itere(lcommandes);
+                
+            }
+            exit(res);
+        }
+        else{
+            int active_process = 0;
+            // Si l'option -p est activée  
+    while(lcommandes->head != NULL){
+        if (active_process < parrallel) {
+        pid_t pid = fork();
+        if (pid == 0) {
+            int temp;
+            applyCommand(lcommandes->head->data, &temp);
+            if(temp > res) res = temp;
+            
+            exit(res);
+        } else if (pid > 0) {
+            active_process++;
+            itere(lcommandes);
+
+        }
+    } else {
+        wait(NULL);
+        active_process--;
+        }
+    }
+
+    while (active_process > 0) {
+        wait(NULL);
+        active_process--;
+    }
+
+        }
+        freeLinkedList(lcommandes);
+        exit(0);
     }
     else{
         int status;
@@ -496,7 +545,7 @@ int cmd_if(command *commande){
     return result;
 }
 
-int cmd_for(command *commande,linkedList *commandList){
+int cmd_for(command *commande,linkedList *commandList, int *parralel){
     int result = 0;
     char *errorMessage = "usage: for [variable-name] in REP [-A] [-r] [-e EXT] [-t TYPE] [-p MAX] { CMD }\n";
     char buf[1024];
@@ -615,7 +664,6 @@ int cmd_for(command *commande,linkedList *commandList){
     }
 
     struct stat st;
-    int active_process = 0;
 
     while((entry = readdir(dir)) != NULL){
         char *newref = getRelativeReference(argv[3], entry->d_name);
@@ -646,15 +694,10 @@ int cmd_for(command *commande,linkedList *commandList){
             command *entry  = split_argv_for(bufsize, argv + firstind + 1, argc - firstind, newref, varname);
             if(type == '\0' || isSameType(st.st_mode, type)){
 
-                if(max_parralel > 0){
-                    if(commandList==NULL) commandList = newLinkedList(entry);
-                    else addLast(commandList, entry);
-
-                }
-                else{
-                    applyCommand(entry, &temp);
-                    if(temp > result) result = temp;
-                }
+                
+            if(commandList==NULL) commandList = newLinkedList(entry);
+            else addLast(commandList, entry);
+              
                 
             }
             if(isSameType(st.st_mode, 'd') && r_option){
@@ -670,43 +713,18 @@ int cmd_for(command *commande,linkedList *commandList){
                 }
 
                 strcpy(newPartList[3], newref);
-                temp = cmd_for(newpart,commandList);
+                temp = cmd_for(newpart,commandList, parralel);
 
                 if(temp > result) result = temp;
                 freeCommand(newpart);
             }
-            if(max_parralel < 0) freeCommand(entry);
+
         }
         free(newref);
         free(ref_extension);
     }
 
-if (max_parralel > 0) {  // Si l'option -p est activée  
-    while(commandList->head != NULL){
-        if (active_process < max_parralel) {
-        pid_t pid = fork();
-        if (pid == 0) {
-            int temp;
-            applyCommand(commandList->head->data, &temp);
-            if(temp > result) result = temp;
-            
-            exit(result);
-        } else if (pid > 0) {
-            active_process++;
-            itere(commandList);
-
-        }
-    } else {
-        wait(NULL);
-        active_process--;
-        }
-    }
-
-    while (active_process > 0) {
-        wait(NULL);
-        active_process--;
-    }
-}
+    *parralel = max_parralel;
 
     goto cleanup_return;
 
