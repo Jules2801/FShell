@@ -587,7 +587,7 @@ int cmd_for(command *commande,linkedList *commandList, int *parralel){
         result = 1;
         goto cleanup_return;
     }
-    varname[0] = '\0';
+    varname[0] = '\0'; 
     if(strcat(varname, "$") == NULL){
         perror("Erreur lors de la concaténation d'une chaîne de caractère");
         result = 1;
@@ -622,7 +622,6 @@ int cmd_for(command *commande,linkedList *commandList, int *parralel){
                     char *s = "Erreur lors de l'allocation mémoire\n";
                     write(STDERR_FILENO, s, strlen(s));
                     result = 1;
-                    freeLinkedList(commandList);
                     goto cleanup_return;
                 }
 
@@ -636,7 +635,6 @@ int cmd_for(command *commande,linkedList *commandList, int *parralel){
                     char *s = "Vous devez fournir un caractère valide (f pour les fichiers ordinaires, d pour les répertires, l pour les liens symboliques, p pour les tubes).\n";
                     write(STDERR_FILENO, s, strlen(s));
                     result = 1;
-                    freeLinkedList(commandList);
                     goto cleanup_return;
                 }
 
@@ -648,7 +646,6 @@ int cmd_for(command *commande,linkedList *commandList, int *parralel){
                 if((max_parralel = stringToPositiveInteger(optarg)) == -1){
                     write(2, errorMessage, strlen(errorMessage));
                     result = 2;
-                    freeLinkedList(commandList);
                     goto cleanup_return;
                 };
 
@@ -657,7 +654,6 @@ int cmd_for(command *commande,linkedList *commandList, int *parralel){
             case '?' :
                 write(2, errorMessage, strlen(errorMessage));
                 result = 2;
-                freeLinkedList(commandList);
                 goto cleanup_return;
         }   
     }
@@ -665,7 +661,6 @@ int cmd_for(command *commande,linkedList *commandList, int *parralel){
     if(strcmp("{", argv[firstind]) != 0 || strcmp("}", argv[argc-1]) != 0 || isBraceGood(argv) == 0){
         write(2, errorMessage, strlen(errorMessage));
         result = 2;
-        freeLinkedList(commandList);
         goto cleanup_return;
     }
 
@@ -676,7 +671,6 @@ int cmd_for(command *commande,linkedList *commandList, int *parralel){
         char *ref_extension = extract_extension(entry->d_name);
         if(lstat(newref, &st) == -1){
             result = 1;
-            freeLinkedList(commandList);
             goto cleanup_return;
         }
         if(strcmp(entry->d_name, ".") == 0 
@@ -702,6 +696,8 @@ int cmd_for(command *commande,linkedList *commandList, int *parralel){
             
             if(type == '\0' || isSameType(st.st_mode, type)){
                 addLast(commandList, entry);// On ajoute la commande à la fin de la liste
+            }else { 
+                freeCommand(entry);
             }
 
             if(isSameType(st.st_mode, 'd') && r_option){
