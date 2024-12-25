@@ -57,6 +57,11 @@ command *newCommandList(char **fullcommands);
  **/
 void freeCommand(command *command);
 
+/**
+ * Fonction permettant de créer une liste chaînée vide
+ * @return Une liste chaînée ou NULL si problème d'allocation mémoire
+ **/
+linkedList *newEmptyLinkedList();
 
 /**
  * Fonction permettant de créer une nouvelle liste chaînée
