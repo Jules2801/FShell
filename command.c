@@ -194,41 +194,42 @@ int forCommand(command *commande){
                 applyCommand(cmd, &temp);
                 if(temp > res) res = temp;
                 itere(lcommandes);
-                
             }
-            exit(res);
         }
         else{
             int active_process = 0;
             // Si l'option -p est activée  
-    while(lcommandes->head != NULL){
-        if (active_process < parrallel) {
-        pid_t pid = fork();
-        if (pid == 0) {
-            int temp;
-            applyCommand(lcommandes->head->data, &temp);
-            if(temp > res) res = temp;
-            
-            exit(res);
-        } else if (pid > 0) {
-            active_process++;
-            itere(lcommandes);
+            while(lcommandes->head != NULL){
+                if (active_process < parrallel) {
+                pid_t pid = fork();
+                if (pid == 0) {
+                    int temp;
+                    applyCommand(lcommandes->head->data, &temp);
+                    if(temp > res) res = temp;
+                    freeLinkedList(lcommandes);
+                    exit(res);
+                } else if (pid > 0) {
+                    active_process++;
+                    itere(lcommandes);
+                }   else {
+                    freeLinkedList(lcommandes);
+                    exit(1);
+                }
 
-        }
-    } else {
-        wait(NULL);
-        active_process--;
-        }
-    }
+            } else {
+                wait(NULL);
+                active_process--;
+                }
+            }
 
-    while (active_process > 0) {
-        wait(NULL);
-        active_process--;
-    }
+            while (active_process > 0) {
+                wait(NULL);
+                active_process--;
+            }
 
         }
         freeLinkedList(lcommandes);
-        exit(0);
+        exit(res);
     }
     else{
         int status;
