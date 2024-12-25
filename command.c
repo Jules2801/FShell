@@ -179,7 +179,7 @@ void applyCommand(command *commande, int *error){
 int forCommand(command *commande){
     pid_t pid = 0;
     if((pid = fork()) == 0){
-        linkedList *lcommandes = NULL;
+        linkedList *lcommandes = newLinkedList(NULL);
         int parrallel;
         int ret = cmd_for(commande,lcommandes, &parrallel);
         if(ret != 0){
@@ -692,14 +692,11 @@ int cmd_for(command *commande,linkedList *commandList, int *parralel){
             }
             int bufsize = argc - (firstind) - 2;
             command *entry  = split_argv_for(bufsize, argv + firstind + 1, argc - firstind, newref, varname);
+            
             if(type == '\0' || isSameType(st.st_mode, type)){
-
-                
-            if(commandList==NULL) commandList = newLinkedList(entry);
-            else addLast(commandList, entry);
-              
-                
+                addLast(commandList, entry);// On ajoute la commande à la fin de la liste
             }
+
             if(isSameType(st.st_mode, 'd') && r_option){
                 command *newpart = copyPartition(commande);
                 char **newPartList = newpart->list;
