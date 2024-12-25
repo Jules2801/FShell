@@ -19,7 +19,7 @@
 int commande_externe(command *command);
 
 int forCommand(command *command);
-int cmd_for(command *command);
+int cmd_for(command *command,linkedList *commandList, int *parralel);
 
 int exitCommand(command *command, int *error);
 int cmd_exit(command *command, int *error);
@@ -78,6 +78,14 @@ void applyCommand(command *commande, int *error){
         free(commandes);
     }
     else{
+        if(strcmp(commande->list[0], "for") == 0) {
+            *error =  forCommand(commande);
+            return;
+        }
+        else if(strcmp(commande->list[0], "if") == 0){
+            *error = ifCommand(commande);
+            return;
+        }
         int countIn = 0;
         int oldIn = dup(STDIN_FILENO);
 
@@ -140,8 +148,6 @@ void applyCommand(command *commande, int *error){
         if(strcmp(partitionWithoutRed[0], "pwd") == 0) *error = pwdCommand(command_without_red);
         else if(strcmp(partitionWithoutRed[0], "exit") == 0) *error = exitCommand(command_without_red, error);
         else if(strcmp(partitionWithoutRed[0], "ftype") == 0) *error = ftypeCommand(command_without_red);
-        else if(strcmp(partitionWithoutRed[0], "for") == 0) *error =  forCommand(command_without_red);
-        else if(strcmp(partitionWithoutRed[0], "if") == 0) *error = ifCommand(command_without_red);
         else if(strcmp(partitionWithoutRed[0], "cd") == 0) *error = cdCommand(command_without_red);
         else *error = commande_externe(command_without_red);
 
@@ -173,7 +179,57 @@ void applyCommand(command *commande, int *error){
 int forCommand(command *commande){
     pid_t pid = 0;
     if((pid = fork()) == 0){
-        exit(cmd_for(commande));
+        linkedList *lcommandes = newLinkedList(NULL);
+        int parrallel;
+        int ret = cmd_for(commande,lcommandes, &parrallel);
+        if(ret != 0){
+            freeLinkedList(lcommandes);
+            exit(ret);
+        }
+        int res = 0;
+        if(parrallel == -1){
+            while(lcommandes->head != NULL){
+                command *cmd = getCommand(lcommandes);
+                int temp;
+                applyCommand(cmd, &temp);
+                if(temp > res) res = temp;
+                itere(lcommandes);
+            }
+        }
+        else{
+            int active_process = 0;
+            // Si l'option -p est activée  
+            while(lcommandes->head != NULL){
+                if (active_process < parrallel) {
+                pid_t pid = fork();
+                if (pid == 0) {
+                    int temp;
+                    applyCommand(lcommandes->head->data, &temp);
+                    if(temp > res) res = temp;
+                    freeLinkedList(lcommandes);
+                    exit(res);
+                } else if (pid > 0) {
+                    active_process++;
+                    itere(lcommandes);
+                }   else {
+                    freeLinkedList(lcommandes);
+                    exit(1);
+                }
+
+            } else {
+                wait(NULL);
+                active_process--;
+                }
+            }
+
+            while (active_process > 0) {
+                wait(NULL);
+                active_process--;
+            }
+
+        }
+        freeLinkedList(lcommandes);
+        exit(res);
     }
     else{
         int status;
@@ -439,8 +495,7 @@ int cmd_if(command *commande){
 
     if(argc < 5){
         write(2, errorMessage, strlen(errorMessage));
-        result = 2;
-        goto cleanup_return;
+        return 2;
     }
 
     int first_opening_bracket_pos;
@@ -453,8 +508,7 @@ int cmd_if(command *commande){
 
     if(strcmp("}", argv[argc-1]) != 0 || strcmp("{", argv[first_opening_bracket_pos]) != 0 || isBraceGood(argv) == 0 || isBraceGood2(argv) == 0){
         write(2, errorMessage, strlen(errorMessage));
-        result = 2;
-        goto cleanup_return;
+        return 2;
     }
 
     int else_pos = argc;
@@ -462,8 +516,7 @@ int cmd_if(command *commande){
     if(else_pos != argc){
         if(strcmp("}", argv[else_pos - 1]) != 0 || strcmp("{", argv[else_pos + 1]) != 0 ){
             write(2, errorMessage, strlen(errorMessage));
-            result = 2;
-            goto cleanup_return;
+            return 2;
         }
     }
     
@@ -493,7 +546,7 @@ int cmd_if(command *commande){
     return result;
 }
 
-int cmd_for(command *commande){
+int cmd_for(command *commande,linkedList *commandList, int *parralel){
     int result = 0;
     char *errorMessage = "usage: for [variable-name] in REP [-A] [-r] [-e EXT] [-t TYPE] [-p MAX] { CMD }\n";
     char buf[1024];
@@ -534,7 +587,7 @@ int cmd_for(command *commande){
         result = 1;
         goto cleanup_return;
     }
-    varname[0] = '\0';
+    varname[0] = '\0'; 
     if(strcat(varname, "$") == NULL){
         perror("Erreur lors de la concaténation d'une chaîne de caractère");
         result = 1;
@@ -612,6 +665,7 @@ int cmd_for(command *commande){
     }
 
     struct stat st;
+
     while((entry = readdir(dir)) != NULL){
         char *newref = getRelativeReference(argv[3], entry->d_name);
         char *ref_extension = extract_extension(entry->d_name);
@@ -639,10 +693,13 @@ int cmd_for(command *commande){
             }
             int bufsize = argc - (firstind) - 2;
             command *entry  = split_argv_for(bufsize, argv + firstind + 1, argc - firstind, newref, varname);
+            
             if(type == '\0' || isSameType(st.st_mode, type)){
-                applyCommand(entry, &temp);
-                if(temp > result) result = temp;
+                addLast(commandList, entry);// On ajoute la commande à la fin de la liste
+            }else { 
+                freeCommand(entry);
             }
+
             if(isSameType(st.st_mode, 'd') && r_option){
                 command *newpart = copyPartition(commande);
                 char **newPartList = newpart->list;
@@ -656,16 +713,18 @@ int cmd_for(command *commande){
                 }
 
                 strcpy(newPartList[3], newref);
-                temp = cmd_for(newpart);
+                temp = cmd_for(newpart,commandList, parralel);
 
                 if(temp > result) result = temp;
                 freeCommand(newpart);
             }
-            freeCommand(entry);
+
         }
         free(newref);
         free(ref_extension);
     }
+
+    *parralel = max_parralel;
 
     goto cleanup_return;
 

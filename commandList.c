@@ -92,6 +92,12 @@ linkedList *newLinkedList(command *head){
         write(2, "Erreur d'allocation d'une liste chaînée\n", 41);
         return NULL;
     }
+    
+    if (head == NULL) {
+    newlist->head = NULL;
+    return newlist;
+    }
+
     node *newNode = malloc(sizeof(node));
     if (!newNode) {
         write(2, "Erreur d'allocation d'un noeud\n", 31);
