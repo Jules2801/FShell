@@ -297,13 +297,17 @@ int forCommand(command *commande){
                 }
 
             } else {
-                wait(NULL);
+                int status;
+                wait(&status);
+                if(WIFEXITED(status)) if(WEXITSTATUS(status) > res) res = WEXITSTATUS(status);
                 active_process--;
                 }
             }
 
             while (active_process > 0) {
-                wait(NULL);
+                int status;
+                wait(&status);
+                if(WIFEXITED(status)) if(WEXITSTATUS(status) > res) res = WEXITSTATUS(status);
                 active_process--;
             }
 
