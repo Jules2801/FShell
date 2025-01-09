@@ -10,7 +10,7 @@
 
 #define  MAX_BUFFER_SIZE  1024;
 
-char *prompt(int value){ //TODO: vérifié si il est bien nécessaire de connaite le boolean en plus de la valeure
+char *prompt(int value){ //TODO: vérifié si il est bien nécessaire de connaitre le boolean en plus de la valeure
 
     char *color;
     int prompt_status_len; //Représente la taille de [SIG] ou [(0 ou 1)] 5 pour le premier 3 pour le 2em
