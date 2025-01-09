@@ -20,42 +20,34 @@ int isInRed = 0;
 int isOutRed = 0;
 int isErrRed = 0;
 
-int sig_int_received = 0;
+volatile sig_atomic_t sigint_received = 0;
 
 // Gestionnaire pour SIGINT
 void handle_sigint(int sig) {
     if (sig == SIGINT) {
-        sig_int_received = 1;
-        write(STDERR_FILENO, "\n[SIGINT]\n", 11);
+        sigint_received = 1;
     }
 }
 
-// Gestionnaire pour SIGTERM
-void handle_sigterm(int sig) {
-    // SIGTERM est ignoré
-}
 
 // Configuration des gestionnaires de signaux
 void setup_signal() {
     struct sigaction sa_int;
 
+    memset(&sa_int, 0, sizeof(sa_int));
     sa_int.sa_handler = handle_sigint;
-    //sigemptyset(&sa.sa_mask);
-    //sa.sa_flags = 0;
-    if (sigaction(SIGINT, &sa_int, NULL) == -1) {
-        perror("Erreur lors de la configuration de SIGINT");
-        exit(EXIT_FAILURE);
-    }
+    //sigemptyset(&sa_int.sa_mask);
+    //sa_int.sa_flags = 0;
+    if (sigaction(SIGINT, &sa_int, NULL) == -1) perror("Erreur lors de la configuration de SIGINT (sigaction)");
 
+    // Ignorer SIGTERM
     struct sigaction sa_term;
 
-    sa_term.sa_handler = handle_sigterm;
-    //sigemptyset(&sa.sa_mask);
-    //sa.sa_flags = 0;
-    if (sigaction(SIGTERM, &sa_term, NULL) == -1) {
-        perror("Erreur lors de la configuration de SIGTERM");
-        exit(EXIT_FAILURE);
-    }
+    memset(&sa_term, 0, sizeof(sa_term));
+    sa_term.sa_handler = SIG_IGN;
+    //sigemptyset(&sa_term.sa_mask);
+    //sa_term.sa_flags = 0;
+    if (sigaction(SIGTERM, &sa_term, NULL) == -1) perror("Erreur lors de la configuration de SIGTERM (sigaction)");
 }
 
 int main(int argc, char **argv){
@@ -67,10 +59,10 @@ int main(int argc, char **argv){
     previous_directory = NULL; // Pour l'instant on n'a pas d'ancien répertoire
 
     while(1) {
-        // Gestion des interruptions par SIGINT
-        if (sig_int_received) {
-            sig_int_received = 0; 
-            error = -1;    
+
+        if (sigint_received) {
+            sigint_received = 0;
+            error = -1;
             continue;
         }
 
