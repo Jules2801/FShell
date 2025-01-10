@@ -37,11 +37,10 @@ void setup_signal() {
     sa_int.sa_handler = handle_sigint;
     if (sigaction(SIGINT, &sa_int, NULL) == -1) perror("Erreur lors de la configuration de SIGINT (sigaction)");
 
-    // Ignorer SIGTERM
     struct sigaction sa_term;
 
     memset(&sa_term, 0, sizeof(sa_term));
-    sa_term.sa_handler = SIG_IGN;
+    sa_term.sa_handler = SIG_IGN;  // Ignorer SIGTERM
     //sa_term.sa_flags = 0;
     if (sigaction(SIGTERM, &sa_term, NULL) == -1) perror("Erreur lors de la configuration de SIGTERM (sigaction)");
 }
