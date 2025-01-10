@@ -41,7 +41,6 @@ void setup_signal() {
 
     memset(&sa_term, 0, sizeof(sa_term));
     sa_term.sa_handler = SIG_IGN;  // Ignorer SIGTERM
-    //sa_term.sa_flags = 0;
     if (sigaction(SIGTERM, &sa_term, NULL) == -1) perror("Erreur lors de la configuration de SIGTERM (sigaction)");
 }
 
