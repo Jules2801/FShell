@@ -26,10 +26,8 @@ volatile sig_atomic_t sigint_received = 0;
 void handle_sigint(int sig) {
     if (sig == SIGINT) {
         sigint_received = 1;
-        //...
     }
 }
-
 
 // Configuration des gestionnaires de signaux
 void setup_signal() {
