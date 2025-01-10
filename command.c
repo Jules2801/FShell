@@ -38,6 +38,12 @@ int cmd_if(command *commande);
 
 void appliquePipeline(command **commandes,int size,int *error);
 
+void removeSIGTERM(){
+    struct sigaction sa = {0};
+    sa.sa_handler = SIG_DFL;
+    sigaction(SIGTERM, &sa, NULL);
+}
+
 /**
  * Fonction permettant de mettre a jour le repertoire courant et l'ancien
  * @param new_directory le chemin du nouveau repertoire courant
@@ -76,7 +82,7 @@ void applyCommand(command *commande, int *error){
         command **commandes = makeStructuredCommand(commande, &size,";");
         
         for(int i = 0; i < size; i++){
-            applyCommand(commandes[i], error);
+            if(*error != -SIGINT) applyCommand(commandes[i], error);
             freeCommand(commandes[i]);
         }
         free(commandes);
@@ -270,7 +276,7 @@ int forCommand(command *commande){
         if(parrallel == -1){
             while(lcommandes->head != NULL){
                 command *cmd = getCommand(lcommandes);
-                int temp;
+                int temp = 0;
                 applyCommand(cmd, &temp);
                 if(temp > res) res = temp;
                 itere(lcommandes);
@@ -283,7 +289,7 @@ int forCommand(command *commande){
                 if (active_process < parrallel) {
                 pid_t pid = fork();
                 if (pid == 0) {
-                    int temp;
+                    int temp = 0;
                     applyCommand(lcommandes->head->data, &temp);
                     if(temp > res) res = temp;
                     freeLinkedList(lcommandes);
@@ -331,6 +337,7 @@ int forCommand(command *commande){
 int ifCommand(command *commande){
     pid_t pid = 0;
     if((pid = fork()) == 0){
+        removeSIGTERM();
         exit(cmd_if(commande));
     }
     else{
@@ -349,6 +356,7 @@ int ifCommand(command *commande){
 int pwdCommand(command *command){
     pid_t pid = 0;
     if((pid = fork()) == 0){
+        removeSIGTERM();
         exit(cmd_pwd(command));
     }
     else{
@@ -375,6 +383,7 @@ int exitCommand(command *commande, int *error){
 int ftypeCommand(command *commande){
     pid_t pid = 0;
     if((pid = fork()) == 0){
+        removeSIGTERM();
         exit(cmd_ftype(commande));
     }
     else{
@@ -407,7 +416,7 @@ int commande_externe(command *commande){
     }
 
     if(pid == 0){
-
+        removeSIGTERM();
         char **partition = commande->list;
 
         if(strlen(partition[0]) > 2 && partition[0][0] == '.' && partition[0][1] == '/') execv(partition[0], partition);

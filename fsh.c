@@ -26,6 +26,7 @@ volatile sig_atomic_t sigint_received = 0;
 void handle_sigint(int sig) {
     if (sig == SIGINT) {
         sigint_received = 1;
+        //...
     }
 }
 
