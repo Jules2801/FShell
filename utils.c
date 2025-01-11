@@ -286,14 +286,19 @@ char *extract_extension(char* arg){
     return res;
 }
 
-int isBraceGood(char **partition){
-    int size = partSize(partition);
+int isBraceGood(command *commande){
+    int size = commande->size;
+    char **partition = commande->list;
     int braceOpen = 0;
 
     for(int i = 0; i < size; i++){
-        if(strcmp(partition[i], "{") == 0) braceOpen++;
+        if(strcmp(partition[i], "{") == 0){
+            braceOpen++;
+        }
         else if(strcmp(partition[i], "}") == 0){
-            if(braceOpen == 0) return 0;
+            if(braceOpen == 0){
+                return 0;
+            }
             braceOpen--;
         }
     }
@@ -383,8 +388,8 @@ int isStructuredCommand(command *command,char *separator){
     }
 
     for(int i = 1; i < partsize-1; i++){
-        if(strcmp(partition[i], "{") == 0) hasBrace = 1;
-        else if(strcmp(partition[i], "}") == 0) hasBrace = 0;
+        if(strcmp(partition[i], "{") == 0) hasBrace++;
+        else if(strcmp(partition[i], "}") == 0) hasBrace--;
         else if(strstr(partition[i], "\"") != NULL){
             if(hasQuote == 0) hasQuote = 1;
             else hasQuote = 0;
@@ -463,8 +468,8 @@ command **makeStructuredCommand(command *commande, int *size, char *separator) {
     int cmdCount = 1;  // Au moins une commande
     int hasBrace = 0;
     for(int i = 0; i < partSize; i++) {
-        if(strcmp(partition[i], "{") == 0) hasBrace = 1;
-        else if(strcmp(partition[i], "}") == 0) hasBrace = 0;
+        if(strcmp(partition[i], "{") == 0) hasBrace++;
+        else if(strcmp(partition[i], "}") == 0) hasBrace--;
         else if(strcmp(partition[i], separator) == 0 && !hasBrace) cmdCount++;
     }
     

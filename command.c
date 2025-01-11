@@ -15,6 +15,7 @@
 #include <fcntl.h>
 #include "commandList.h"
 #include "redirection.h"
+#include <signal.h>
 
 int commande_externe(command *command);
 
@@ -42,6 +43,12 @@ void removeSIGTERM(){
     struct sigaction sa = {0};
     sa.sa_handler = SIG_DFL;
     sigaction(SIGTERM, &sa, NULL);
+}
+
+void removeSIGINT(){
+    struct sigaction sa = {0};
+    sa.sa_handler = SIG_DFL;
+    sigaction(SIGINT, &sa, NULL);
 }
 
 /**
@@ -265,6 +272,8 @@ void appliquePipeline(command **commandes,int size,int *error){
 int forCommand(command *commande){
     pid_t pid = 0;
     if((pid = fork()) == 0){
+        removeSIGINT();
+        removeSIGTERM();
         linkedList *lcommandes = newLinkedList(NULL);
         int parrallel;
         int ret = cmd_for(commande,lcommandes, &parrallel);
@@ -277,8 +286,8 @@ int forCommand(command *commande){
             while(lcommandes->head != NULL){
                 command *cmd = getCommand(lcommandes);
                 int temp = 0;
-                applyCommand(cmd, &temp);
-                if(temp > res) res = temp;
+                if(res != -SIGINT) applyCommand(cmd, &temp);
+                if((temp > res && res != -SIGINT) || temp == -SIGINT) res = temp;
                 itere(lcommandes);
             }
         }
@@ -290,8 +299,8 @@ int forCommand(command *commande){
                 pid_t pid = fork();
                 if (pid == 0) {
                     int temp = 0;
-                    applyCommand(lcommandes->head->data, &temp);
-                    if(temp > res) res = temp;
+                    if(res != -SIGINT) applyCommand(lcommandes->head->data, &temp);
+                    if((temp > res && res != -SIGINT) || temp == -SIGINT) res = temp;
                     freeLinkedList(lcommandes);
                     exit(res);
                 } else if (pid > 0) {
@@ -319,6 +328,7 @@ int forCommand(command *commande){
 
         }
         freeLinkedList(lcommandes);
+        if(res < 0) raise(-res);
         exit(res);
     }
     else{
@@ -338,7 +348,10 @@ int ifCommand(command *commande){
     pid_t pid = 0;
     if((pid = fork()) == 0){
         removeSIGTERM();
-        exit(cmd_if(commande));
+        removeSIGINT();
+        int res = cmd_if(commande);
+        if(res < 0) raise(-res);
+        exit(res);
     }
     else{
         int status;
@@ -357,7 +370,9 @@ int pwdCommand(command *command){
     pid_t pid = 0;
     if((pid = fork()) == 0){
         removeSIGTERM();
-        exit(cmd_pwd(command));
+        int res = cmd_pwd(command);
+        if(res < 0) raise(-res);
+        exit(res);
     }
     else{
         int status;
@@ -384,7 +399,9 @@ int ftypeCommand(command *commande){
     pid_t pid = 0;
     if((pid = fork()) == 0){
         removeSIGTERM();
-        exit(cmd_ftype(commande));
+        int res = cmd_ftype(commande);
+        if(res < 0) raise(-res);
+        exit(res);
     }
     else{
         int status;
@@ -599,7 +616,7 @@ int cmd_if(command *commande){
         }
     }
 
-    if(strcmp("}", argv[argc-1]) != 0 || strcmp("{", argv[first_opening_bracket_pos]) != 0 || isBraceGood(argv) == 0 || isBraceGood2(argv) == 0){
+    if(strcmp("}", argv[argc-1]) != 0 || strcmp("{", argv[first_opening_bracket_pos]) != 0 || isBraceGood(commande) == 0 || isBraceGood2(argv) == 0){
         write(2, errorMessage, strlen(errorMessage));
         return 2;
     }
@@ -751,8 +768,9 @@ int cmd_for(command *commande,linkedList *commandList, int *parralel){
         }   
     }
     int firstind = optind + 3;
-    if(strcmp("{", argv[firstind]) != 0 || strcmp("}", argv[argc-1]) != 0 || isBraceGood(argv) == 0){
+    if(strcmp("{", argv[firstind]) != 0 || strcmp("}", argv[argc-1]) != 0 || isBraceGood(commande) == 0){
         write(2, errorMessage, strlen(errorMessage));
+        printf("La valeur de is : %d\n", isBraceGood(commande));
         result = 2;
         goto cleanup_return;
     }

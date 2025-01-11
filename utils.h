@@ -93,10 +93,10 @@ char *extract_extension(char *arg);
 
 /**
  * Fonction permettant de vérifier si les accolades dans une partition sont équilibrées.
- * @param partition La partition.
+ * @param commande La commande.
  * @return 1 si équilibrées, 0 sinon.
  */
-int isBraceGood(char **partition);
+int isBraceGood(command *commande);
 
 /**
  * Fonction permettant de vérifier si un nom est illégal.
@@ -167,7 +167,6 @@ int isSameType(mode_t mode, char f);
 command *copyPartition(command *commande);
 
 char *remove_extension_from_file(const char *arg);
-int isBraceGood(char **partition);
 int isBraceGood2(char **partition);
 int isIllegalName(char *argv);
 
