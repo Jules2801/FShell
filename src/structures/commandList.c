@@ -1,12 +1,5 @@
-#include <stddef.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <unistd.h>
-#include <stdbool.h>
-#include <ctype.h>
-#include "utils.h"
-#include "commandList.h"
+#include "../../include/utils.h"
+#include "../../include/structures/commandList.h"
 
 
 /**
@@ -44,6 +37,11 @@ command *newCommand(char *fullcommand){
     return newCommand;
 }
 
+/**
+ * Fonction permettant de créer une struct command en lui fournissant déjà une partition de chaîne de caractère.
+ * @param fullcommand Partition de chaîne de caractère.
+ * @return Une struct commande ou NULL si erreur d'allocation mémoire
+ **/
 command *newCommandList(char **fullcommands){
     command *newCommand = malloc(sizeof(command));
     if (!newCommand) {

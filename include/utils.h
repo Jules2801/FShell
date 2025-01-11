@@ -2,9 +2,13 @@
 #define UTILS_H
 
 #include <stddef.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
 #include <stdbool.h>
-#include <sys/types.h>
-#include "commandList.h"
+
+#include "structures/commandList.h"
 
 /**
  * Fonction permettant de compter le nombre de mots dans une chaîne de caractères.
@@ -60,17 +64,6 @@ int isEqualFirst(const char *str, const char *var);
 char *replace_var(char *arg, char *var, char *name);
 
 /**
- * Fonction permettant de créer une nouvelle partition de chaînes de caractères avec substitution.
- * @param bufSize Taille du tableau des chaînes de caractères.
- * @param argv Tableau des chaînes de caractères initiales.
- * @param argvsize Taille du tableau initial.
- * @param ref Référence pour remplacer les variables.
- * @param varname Nom de la variable à remplacer.
- * @return Une nouvelle partition de chaînes de caractères.
- */
-command *split_argv_for(int bufSize, char **argv, int argvsize, char *ref, char *varname);
-
-/**
  * Fonction permettant de vérifier si une chaîne de caractères représente un entier positif.
  * @param arg La chaîne de caractères.
  * @return 1 si c'est un entier positif, 0 sinon.
@@ -92,16 +85,18 @@ int stringToPositiveInteger(char *arg);
 char *extract_extension(char *arg);
 
 /**
- * Fonction permettant de vérifier si les accolades dans une partition sont équilibrées.
+ * Fonction permettant de vérifier si des spérateurs dans une partition sont équilibrées.
  * @param commande La commande.
+ * @param open_separator Le séparateur ouvrant.
+ * @param close_separator Le séparateur fermant.
  * @return 1 si équilibrées, 0 sinon.
  */
-int isBraceGood(command *commande);
+int isSeparatorGood(command *commande, char *open_separator, char *close_separator);
 
 /**
- * Fonction permettant de vérifier si un nom est illégal.
- * @param argv Le nom à vérifier.
- * @return 1 si illégal, 0 sinon.
+ * Méthode permettant de vérifier si la chaîne de caractère fourni ne représente pas une valeur interdites.
+ * @param argv La chaine de caractère.
+ * @return 1 si c'est le cas et 0 sinon.
  */
 int isIllegalName(char *argv);
 
@@ -166,10 +161,6 @@ int isSameType(mode_t mode, char f);
  */
 command *copyPartition(command *commande);
 
-char *remove_extension_from_file(const char *arg);
-int isBraceGood2(char **partition);
-int isIllegalName(char *argv);
-
 /**
  * Fonction qui stocke la position d'un "else" das une commande structurée "if" s'il existe.
  * @param commande La commande structurée.
@@ -178,5 +169,4 @@ int isIllegalName(char *argv);
 void hasElse(char **commande, int *else_pos);
 
 
-command *makeSubPartition(command *commande, int first, int last);
 #endif

@@ -1,13 +1,6 @@
 #ifndef LINKEDLIST_H
 #define LINKEDLIST_H
 
-#include <stddef.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <unistd.h>
-#include <stdbool.h>
-
 /**
  * Structure représentant une commande
  * Contient un tableau de chaînes de caractères (list) et un entier (size) indiquant sa taille

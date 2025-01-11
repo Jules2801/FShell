@@ -7,7 +7,8 @@
 #include <ctype.h>
 #include <dirent.h>
 #include <sys/stat.h>
-#include "commandList.h"
+
+#include "../include/structures/commandList.h"
 
 void free_double_buffer(char **buffer, int bufsize);
 
@@ -157,8 +158,6 @@ char *replace_var(char *arg, char *var, char *name){
     int bufsize = 0;
     int i = 0;
 
-    //printf("%s\n", arg);
-
     int len = strlen(arg);
     while(i < len){
         if(arg[i] == '$' && isEqualFirst(arg + i, var)){
@@ -170,8 +169,6 @@ char *replace_var(char *arg, char *var, char *name){
             i++;
         }
     }
-
-    //printf("%d\n", bufsize);
 
     if((buf = malloc(bufsize + 1)) == NULL){
         perror("Erreur lors de l'allocation mémoire");
@@ -191,40 +188,6 @@ char *replace_var(char *arg, char *var, char *name){
 
     buf[j] = '\0';
     return buf;
-}
-
-/**
- * Fonction permettant d'avoir une nouvelle partition de chaîne de caractère en prennant en compte le fait de remplacer $F par le nom d'une entrée donné
- * @param bufSize Taille du tableau de la chaîne de caractère.
- * @param argv Tableau de chaîne de caractère initiale.
- * @param filename Nom de l'entrée.
- * @return Nouvelle partition de chaîne de caractère avec $F remplacé par la référence de l'entrée.
- */
-command * split_argv_for(int bufSize, char **argv, int argvsize, char *ref, char *varname){
-    char **partition = NULL;
-    int i;
-    if((partition = malloc((bufSize + 1) * sizeof(char *))) == NULL) goto error;
-    for(i = 0; i < argvsize-2; i++){
-        if(strcmp(varname, argv[i]) == 0){
-            if((partition[i] = malloc(strlen(ref) + 1)) == NULL) goto error;
-            strcpy(partition[i], ref);
-        }
-        
-        else{
-            char *newvar = replace_var(argv[i], varname, ref);
-            if((partition[i] = malloc(strlen(newvar) + 1)) == NULL) goto error;
-            strcpy(partition[i], newvar);
-            free(newvar);
-        };
-    }
-    partition[bufSize] = (char *) NULL;
-    command *res = newCommandList(partition);
-    return res;
-
-    error:
-        perror("Erreur lors de la copie d'une chaine de caractère");
-        if(partition != NULL) free_double_buffer(partition, bufSize+1);
-        exit(1);
 }
 
 /**
@@ -286,45 +249,46 @@ char *extract_extension(char* arg){
     return res;
 }
 
-int isBraceGood(command *commande){
+/**
+ * Fonction permettant de vérifier si des spérateurs dans une partition sont équilibrées.
+ * @param commande La commande.
+ * @param open_separator Le séparateur ouvrant.
+ * @param close_separator Le séparateur fermant.
+ * @return 1 si équilibrées, 0 sinon.
+ */
+int isSeparatorGood(command *commande, char *open_separator, char *close_separator){
     int size = commande->size;
     char **partition = commande->list;
-    int braceOpen = 0;
+    int separatorOpen = 0;
 
     for(int i = 0; i < size; i++){
-        if(strcmp(partition[i], "{") == 0){
-            braceOpen++;
+        if(strcmp(partition[i], open_separator) == 0){
+            separatorOpen++;
         }
-        else if(strcmp(partition[i], "}") == 0){
-            if(braceOpen == 0){
+        else if(strcmp(partition[i], close_separator) == 0){
+            if(separatorOpen == 0){
                 return 0;
             }
-            braceOpen--;
+            separatorOpen--;
         }
     }
 
-    return braceOpen == 0;
+    return separatorOpen == 0;
 }
-
-int isBraceGood2(char **partition){
-    int size = partSize(partition);
-    int braceOpen = 0;
-
-    for(int i = 0; i < size; i++){
-        if(strcmp(partition[i], "[") == 0) braceOpen++;
-        else if(strcmp(partition[i], "]") == 0){
-            if(braceOpen == 0) return 0;
-            braceOpen--;
-        }
-    }
-
-    return braceOpen == 0;
-}
-
+/**
+ * Méthode permettant de vérifier si la chaîne de caractère fourni ne représente pas une valeur interdites.
+ * @param argv La chaine de caractère.
+ * @return 1 si c'est le cas et 0 sinon.
+ */
 int isIllegalName(char *argv){
     return strcmp(argv, "{") == 0 || strcmp(argv, "}") == 0 || strcmp(argv, "<") == 0 || strcmp(argv, ">") == 0 || strcmp(argv, "|") == 0 || strcmp(argv, ";") == 0 || strcmp(argv, "$") == 0;
 }
 
+/**
+ * Fonction permettant de retirer l'extension d'un fichier.
+ * @param arg Le nom du fichier.
+ * @return Le nom sans extension.
+ */
 char *remove_extension_from_file(const char *arg){
     if (arg == NULL || strlen(arg) == 0) 
         return NULL;
@@ -423,7 +387,13 @@ int nbCommand(command *command){
 }
 
 
-// Modification de makeSubPartition pour une meilleure gestion de la mémoire
+/**
+ * Fonction permettant de créer une sous-partition d'une partition donnée.
+ * @param commande La partition de base.
+ * @param first Position de début.
+ * @param last Position de fin.
+ * @return La sous-partition.
+ */
 command *makeSubPartition(command *commande, int first, int last) {
     if(first > last) return NULL;
     
@@ -450,22 +420,17 @@ command *makeSubPartition(command *commande, int first, int last) {
 }
 
 /**
- * Fonction permettant de créer une sous-partition d'une partition donné en fonction de la position du début et de la fin.
- * @param commande La partition de base
- * @param first Position du début de la sous-partition
- * @param last Position de la fin de la sous-partition
- * @return La nouvelle sous-partition voulue.
+ * Fonction permettant de créer une liste de partitions pour une commande structurée.
+ * @param commande La commande structurée.
+ * @param size Pointeur pour stocker la taille de la liste.
+ * @return La liste de partitions.
  */
-
-
-// Modification de makeStructuredCommand pour mieux gérer les séparateurs
 command **makeStructuredCommand(command *commande, int *size, char *separator) {
     command **structuredCommand;
     char **partition = commande->list;
     int partSize = commande->size;
     
-    // Compter d'abord le nombre de commandes
-    int cmdCount = 1;  // Au moins une commande
+    int cmdCount = 1; 
     int hasBrace = 0;
     for(int i = 0; i < partSize; i++) {
         if(strcmp(partition[i], "{") == 0) hasBrace++;
@@ -473,13 +438,11 @@ command **makeStructuredCommand(command *commande, int *size, char *separator) {
         else if(strcmp(partition[i], separator) == 0 && !hasBrace) cmdCount++;
     }
     
-    // Allouer le tableau de commandes
     if((structuredCommand = malloc(cmdCount * sizeof(command *))) == NULL) {
         perror("Erreur d'allocation");
         exit(1);
     }
     
-    // Découper en sous-commandes
     int cmdStart = 0;
     int cmdIndex = 0;
     hasBrace = 0;
@@ -488,14 +451,12 @@ command **makeStructuredCommand(command *commande, int *size, char *separator) {
         if(strcmp(partition[i], "{") == 0) hasBrace = 1;
         else if(strcmp(partition[i], "}") == 0) hasBrace = 0;
         else if(strcmp(partition[i], separator) == 0 && !hasBrace) {
-            // Ne pas inclure le séparateur dans la sous-commande
             structuredCommand[cmdIndex] = makeSubPartition(commande, cmdStart, i - 1);
             cmdStart = i + 1;
             cmdIndex++;
         }
     }
     
-    // Dernière commande
     if(cmdStart < partSize) {
         structuredCommand[cmdIndex] = makeSubPartition(commande, cmdStart, partSize - 1);
         cmdIndex++;
@@ -524,9 +485,10 @@ int isSameType(mode_t mode, char f){
 }
 
 /**
- * Fonction permettant de copier une partition de chaîne de caractère.
+ * Fonction permettant de copier une partition de chaînes de caractères.
+ * @param commande La partition à copier.
+ * @return Une copie de la partition.
  */
-
 command *copyPartition(command *commande){
     int size = commande->size;
     char **partition = commande->list;

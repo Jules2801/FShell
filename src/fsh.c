@@ -7,12 +7,12 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 #include <signal.h>
-#include "commandList.h"
-#include "prompt.h"
-#include "utils.h"
-#include "command.h"
-#include "glob.h"
-#include "commandList.h"
+
+#include "../include/structures/commandList.h"
+#include "../include/prompt.h"
+#include "../include/utils.h"
+#include "../include/command.h"
+#include "../include/glob.h"
 
 char *previous_directory = NULL;
 char *current_directory = NULL;
