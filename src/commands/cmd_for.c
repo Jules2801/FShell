@@ -9,7 +9,9 @@
  * Fonction permettant d'avoir une nouvelle partition de chaîne de caractère en prennant en compte le fait de remplacer $F par le nom d'une entrée donné
  * @param bufSize Taille du tableau de la chaîne de caractère.
  * @param argv Tableau de chaîne de caractère initiale.
- * @param filename Nom de l'entrée.
+ * @param argvsize La taille du tableau de chaîne de caractère
+ * @param ref Chaîne de caractère représentant la valeur de la variable.
+ * @param varname Chaîne de caractère représentant la variable.
  * @return Nouvelle partition de chaîne de caractère avec $F remplacé par la référence de l'entrée.
  */
 command * split_argv_for(int bufSize, char **argv, int argvsize, char *ref, char *varname){

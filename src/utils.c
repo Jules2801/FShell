@@ -423,6 +423,7 @@ command *makeSubPartition(command *commande, int first, int last) {
  * Fonction permettant de créer une liste de partitions pour une commande structurée.
  * @param commande La commande structurée.
  * @param size Pointeur pour stocker la taille de la liste.
+ * @param separator La chaîne de caractère représentant le séparateur des commandes.
  * @return La liste de partitions.
  */
 command **makeStructuredCommand(command *commande, int *size, char *separator) {
@@ -470,8 +471,8 @@ command **makeStructuredCommand(command *commande, int *size, char *separator) {
 
 /**
  * Fonction permettant de savoir si un type de fichier correspond au bon caractère
- * @param filetype Le type de fichier
- * @param type Le caractère représetant le type de fichier (f pour fichier ordinaire, d pour les répertoires, l pour les liens symboliques, p pour les tubes).
+ * @param mode Le type de fichier
+ * @param f Le caractère représetant le type de fichier (f pour fichier ordinaire, d pour les répertoires, l pour les liens symboliques, p pour les tubes).
  * @return 1 si cela correspond bien au type de fichier et 0 sinon
  */
 int isSameType(mode_t mode, char f){
