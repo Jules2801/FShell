@@ -54,7 +54,7 @@ void applyCommand(command *commande, int *error){
         command **commandes = makeStructuredCommand(commande, &size,";");
         
         for(int i = 0; i < size; i++){
-            if(*error != -SIGINT) applyCommand(commandes[i], error);
+            if(*error != -SIGINT && sigint_received == 0) applyCommand(commandes[i], error);
             freeCommand(commandes[i]);
         }
         free(commandes);
@@ -223,7 +223,10 @@ void appliquePipeline(command **commandes,int size,int *error){
     int status;
     waitpid(pids[size-1], &status, 0);
     if(WIFEXITED(status)) *error = WEXITSTATUS(status);
-    else if(WSTOPSIG(status)) *error = -WTERMSIG(status);
+    else if(WSTOPSIG(status)){
+        *error = -WTERMSIG(status);
+        if(*error == -SIGINT) sigint_received = 1;
+    }
 
     for (i = 0; i < size; i++) {
         freeCommand(commandes[i]);
@@ -302,7 +305,10 @@ int forCommand(command *commande){
         int status;
         waitpid(pid, &status, 0);
         if(WIFEXITED(status)) return WEXITSTATUS(status);
-        if(WIFSIGNALED(status)) return -WTERMSIG(status);
+        if(WIFSIGNALED(status)){
+            sigint_received = 1;
+            return -WTERMSIG(status);
+        }
         return 1;
     }
 }
@@ -325,7 +331,10 @@ int ifCommand(command *commande){
         int status;
         waitpid(pid, &status, 0);
         if(WIFEXITED(status)) return WEXITSTATUS(status);
-        if(WIFSIGNALED(status)) return -WTERMSIG(status);
+        if(WIFSIGNALED(status)){
+            sigint_received = 1;
+            return -WTERMSIG(status);
+        }
         return 1;
     }
 }
@@ -347,7 +356,10 @@ int pwdCommand(command *command){
         int status;
         waitpid(pid, &status, 0);
         if(WIFEXITED(status)) return WEXITSTATUS(status);
-        if(WIFSIGNALED(status)) return -WTERMSIG(status);
+        if(WIFSIGNALED(status)){
+            sigint_received = 1;
+            return -WTERMSIG(status);
+        }
         return 1;
     }
 }
@@ -379,7 +391,10 @@ int ftypeCommand(command *commande){
         int status;
         waitpid(pid, &status, 0);
         if(WIFEXITED(status)) return WEXITSTATUS(status);
-        if(WIFSIGNALED(status)) return -WTERMSIG(status);
+        if(WIFSIGNALED(status)){
+            sigint_received = 1;
+            return -WTERMSIG(status);
+        }
         return 1;
     }
 }
@@ -421,7 +436,10 @@ int commande_externe(command *commande){
         int status;
         waitpid(pid, &status, 0);
         if(WIFEXITED(status)) return WEXITSTATUS(status);
-        if(WIFSIGNALED(status)) return -WTERMSIG(status);
+        if(WIFSIGNALED(status)){
+            sigint_received = 1;
+            return -WTERMSIG(status);
+        }
         return 1;
     }
 }
