@@ -1,4 +1,6 @@
 #include <signal.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 #include "../include/utils.h"
 #include "../include/global.h"
