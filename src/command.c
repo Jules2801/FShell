@@ -306,7 +306,7 @@ int forCommand(command *commande){
         waitpid(pid, &status, 0);
         if(WIFEXITED(status)) return WEXITSTATUS(status);
         if(WIFSIGNALED(status)){
-            sigint_received = 1;
+            if(WTERMSIG(status) == SIGINT) sigint_received = 1;
             return -WTERMSIG(status);
         }
         return 1;
@@ -332,7 +332,7 @@ int ifCommand(command *commande){
         waitpid(pid, &status, 0);
         if(WIFEXITED(status)) return WEXITSTATUS(status);
         if(WIFSIGNALED(status)){
-            sigint_received = 1;
+            if(WTERMSIG(status) == SIGINT) sigint_received = 1;
             return -WTERMSIG(status);
         }
         return 1;
@@ -357,7 +357,7 @@ int pwdCommand(command *command){
         waitpid(pid, &status, 0);
         if(WIFEXITED(status)) return WEXITSTATUS(status);
         if(WIFSIGNALED(status)){
-            sigint_received = 1;
+            if(WTERMSIG(status) == SIGINT) sigint_received = 1;
             return -WTERMSIG(status);
         }
         return 1;
@@ -392,7 +392,7 @@ int ftypeCommand(command *commande){
         waitpid(pid, &status, 0);
         if(WIFEXITED(status)) return WEXITSTATUS(status);
         if(WIFSIGNALED(status)){
-            sigint_received = 1;
+            if(WTERMSIG(status) == SIGINT) sigint_received = 1;
             return -WTERMSIG(status);
         }
         return 1;
@@ -437,7 +437,7 @@ int commande_externe(command *commande){
         waitpid(pid, &status, 0);
         if(WIFEXITED(status)) return WEXITSTATUS(status);
         if(WIFSIGNALED(status)){
-            sigint_received = 1;
+            if(WTERMSIG(status) == SIGINT) sigint_received = 1;
             return -WTERMSIG(status);
         }
         return 1;
