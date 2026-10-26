@@ -1,4 +1,4 @@
-# Projet `fsh`
+# Fsh
 
 ## Description
 `fsh` est un interpréteur de commandes interactif écrit en C, conçu pour reproduire des fonctionnalités classiques des shells tout en introduisant des commandes spécifiques comme des boucles `for` avancées.
